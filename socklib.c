@@ -1,11 +1,13 @@
 /*
  * socklib.c
  *
- * socklib.c 包含了在创建客户端/服务端程序时常用到的函数。
+ * socklib.c 包含了创建客户端/服务端程序时常用到的函数。
  * 主要包含：
  * 
+ * 建立服务端socket
  * int make_server_socket(int portnum);
  *
+ * 建立到服务端的连接
  * int make_server_sorket_q(int portnum, int backlog);
  *
  * int connect_to_server(char *hostname, int portnum);
@@ -25,11 +27,11 @@
 
 int make_server_socket_q(int, int);
 
-int make_server_socket(int portnum) {
-	return make_server_socket_q(portnum, BACKLOG);
+int make_server_socket(int port) {
+	return make_server_socket_q(port, BACKLOG);
 }
 
-int make_server_socket_q(int portnum, int backlog) {
+int make_server_socket_q(int port, int backlog) {
 	struct sockaddr_in servaddr;
 	struct hostent *hp;
 	char hostname[BUFSIZ];
@@ -37,6 +39,7 @@ int make_server_socket_q(int portnum, int backlog) {
 
 	sock_id = socket(PF_INET, SOCK_STREAM, 0);
 	if(sock_id == -1) {
+		fprintf(stderr, "socket");
 		return -1;
 	}
 
@@ -48,9 +51,10 @@ int make_server_socket_q(int portnum, int backlog) {
 	hp = gethostbyname(hostname);
 
 	bcopy((void*)hp->h_addr, (void*)&servaddr.sin_addr, hp->h_length);
-	servaddr.sin_port = htons(portnum);
+	servaddr.sin_port = htons(port);
 	servaddr.sin_family = AF_INET;
 	if(bind(sock_id, (struct sockaddr *)&servaddr, sizeof(servaddr)) != 0) {
+		fprintf(stderr, "bind");
 		return -1;
 	}
 
@@ -58,6 +62,7 @@ int make_server_socket_q(int portnum, int backlog) {
 	 * 开启对socket的监听
 	 */
 	if(listen(sock_id, backlog) != 0) {
+		fprintf(stderr, "listen");
 		return -1;
 	}
 

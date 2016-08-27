@@ -10,24 +10,26 @@
 #include <sys/types.h>
 #include <sys/stat.h>
 #include <string.h>
+#include <pthread.h>
+#include <time.h>
+#include <unistd.h>
 
-void read_until_crnl(FILE*);
-void process_request(char*, int);
-void header(FILE*, char*);
-void cannot_do(int);
-void do_404(char*, int);
-int isadir(char*);
-int not_exist(char*);
-void do_ls(char*, int);
-char *file_type(char*);
-int ends_in_cgi(char*);
-void do_exec(char*, int);
-void do_cat(char*, int);
+#include "tinyhttpd.h"
+
+void setup(pthread_attr_t*);
+void* handle(void*);
+
+time_t server_started;
+int server_bytes_sent;
+int server_requests;
 
 int main(int ac, char *av[]) {
-	int sock_id, fd;
-	FILE *fpin;
-	char request[BUFSIZ];
+	int sock_id;
+	int	fd;
+	int *fdptr;
+	
+	pthread_t worker;
+	pthread_attr_t attr;
 
 	if(ac == 1) {
 		fprintf(stderr, "usage: ./tinyhttpd portnum\n");
@@ -38,25 +40,47 @@ int main(int ac, char *av[]) {
 	if(sock_id == -1) {
 		exit(2);
 	}
+	
+	setup(&attr);
 
 	/*
 	 * main loop
 	 */
 	while(1) {
 		fd = accept(sock_id, NULL, NULL);
-		fpin = fdopen(fd, "r");
-
-		/*
-		 * 读取请求信息
-		 */
-		fgets(request, BUFSIZ, fpin);
-		printf("get a call: request = %s", request);
-		read_until_crnl(fpin);
-
-		process_request(request, fd);
-
-		fclose(fpin);
+		server_requests++;
+		fdptr = (int*)malloc(sizeof(int));
+		*fdptr = fd;
+		pthread_create(&worker, &attr, handle, fdptr);
 	}
+}
+
+void setup(pthread_attr_t *attrp) {
+	pthread_attr_init(attrp);
+	pthread_attr_setdetachstate(attrp, PTHREAD_CREATE_DETACHED);
+	
+	time(&server_started);
+	server_bytes_sent = 0;
+	server_requests = 0;
+}
+
+void* handle(void *fdptr) {
+	FILE *fpin;
+	char request[BUFSIZ];
+	int fd;
+	fd = *(int*)fdptr;
+	free(fdptr);
+
+	fpin = fdopen(fd, "r");
+	fgets(request, BUFSIZ, fpin);
+	printf("get a call: request = %s", request);
+	read_until_crnl(fpin);
+
+	process_request(request, fd);
+
+	fclose(fpin);
+
+	return NULL;
 }
 
 /*-----------------------------------------------------------*
@@ -76,24 +100,19 @@ void read_until_crnl(FILE *fp) {
   -----------------------------------------------------------*/
 void process_request(char *request, int fd) {
 	char cmd[BUFSIZ], arg[BUFSIZ];
-
-	/*
-	 * create a new process and return if not the child
-	 */
-	if(fork() != 0) {
-		return;
-	}
 	
-	strcpy(arg, "./");
-	if(sscanf(request, "%s%s", cmd, arg + 2) != 2) {
+	strcpy(arg, ".");
+	if(sscanf(request, "%s%s", cmd, arg + 1) != 2) {
 		return;
 	}
+
+	printf("arg: %s\n", arg);
 
 	if(strcmp(cmd, "GET") != 0) {
-		cannot_do(fd);
+		cannot_execute(fd);
 	} else if(not_exist(arg)) {
 		do_404(arg, fd);
-	} else if(isadir(arg)) {
+	} else if(isdir(arg)) {
 		do_ls(arg, fd);
 	} else if(ends_in_cgi(arg)) {
 		do_exec(arg, fd);
@@ -114,9 +133,9 @@ void header(FILE *fp, char *content_type) {
 }
 
 /*---------------------------------------------------------*
-		cannot_do(fd) --> unimplement HTTP command
+		cannot_execute(fd) --> unimplement HTTP command
   ---------------------------------------------------------*/
-void cannot_do(int fd) {
+void cannot_execute(int fd) {
 	FILE *fp = fdopen(fd, "w");
 
 	fprintf(fp, "HTTP/1.0 501 Not implemented\r\n");
@@ -141,7 +160,7 @@ void do_404(char *item, int fd) {
 	fclose(fp);
 }
 
-int isadir(char *f) {
+int isdir(char *f) {
 	struct stat info;
 	return (stat(f, &info) != -1 && S_ISDIR(info.st_mode));
 }
