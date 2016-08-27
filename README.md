@@ -13,7 +13,7 @@ make
 -------
 更新与`2016/8/28 02:21:30`
 
-*` tinyhttpd(version 1)`仅支持`GET`请求。
+* `tinyhttpd(version 1)`仅支持`GET`请求。
 * 对于每个`HTTP`请求，`fork`一个进程去处理。
 * `tinyhttpd(version 2)`依旧只支持`GET`请求。
 * 对于每个请求，不再由单独的进程来处理，而是由同一个进程的多个线程来处理。
