@@ -7,17 +7,15 @@
 
 #include <stdio.h>
 #include <stdlib.h>
+#include <sys/socket.h>
 #include <sys/types.h>
 #include <sys/stat.h>
+#include <ctype.h>
 #include <string.h>
 #include <pthread.h>
 #include <time.h>
 #include <unistd.h>
-
 #include "tinyhttpd.h"
-
-void setup(pthread_attr_t*);
-void* handle(void*);
 
 time_t server_started;
 int server_bytes_sent;
@@ -106,8 +104,6 @@ void process_request(char *request, int fd) {
 		return;
 	}
 
-	printf("arg: %s\n", arg);
-
 	if(strcmp(cmd, "GET") != 0) {
 		cannot_execute(fd);
 	} else if(not_exist(arg)) {
@@ -126,7 +122,7 @@ void process_request(char *request, int fd) {
 	if content_type is NULL, we don't need send content-type
   ---------------------------------------------------------*/
 void header(FILE *fp, char *content_type) {
-	fprintf(fp, "HTTP/1.0 200 OK\r\n");
+	fprintf(fp, "HTTP/1.1 200 OK\r\n");
 	if(content_type) {
 		fprintf(fp, "Content-type: %s\r\n", content_type);
 	}
@@ -171,19 +167,55 @@ int not_exist(char *f) {
 } 
 
 void do_ls(char *dir, int fd) {
-	FILE *fp;
+	
+	printf("dir: %s\n", dir);
 
-	fp = fdopen(fd, "w");
-	header(fp, "text/plain");
-	fprintf(fp, "\r\n");
-	fflush(fp);
+	FILE *socket_fpi, *socket_fpo;
+	FILE *pipe_fp;
+	char command[BUFSIZ];
+	int c;
 
-	dup2(fd, 1);
-	dup2(fd, 2);
-	close(fd);
-	execlp("ls", "ls", "-l", dir, NULL);
-	perror(dir);
-	exit(1);
+	if((socket_fpi = fdopen(fd, "r")) == NULL) {
+		fprintf(stderr, "fdopen read");
+	}
+
+	sanitize(dir);
+
+	if((socket_fpo = fdopen(fd, "w")) == NULL) {
+		fprintf(stderr, "fdopen write");
+	}
+
+	sprintf(command, "ls %s", dir);
+	printf("command: %s\n: ", command);
+
+	header(socket_fpo, "text/plain");
+	fprintf(socket_fpo, "\r\n");
+	fflush(socket_fpo);
+
+	if((pipe_fp = popen(command, "r")) == NULL) {
+		fprintf(stderr, "popen");
+	}
+
+	while((c = getc(pipe_fp)) != EOF) {
+		putc(c, socket_fpo);
+	}
+
+	pclose(pipe_fp);
+	fclose(socket_fpo);
+	fclose(socket_fpi);
+	
+}
+
+void sanitize(char *str) {
+	char *src, *dest;
+	src= str;
+	dest = str;
+	for( ; *src; src++) {
+		if(*src == '/' || isalnum(*src)) {
+			*dest++ = *src;
+		}
+	}
+	*dest = '\0';
 }
 
 /*--------------------------------------------------------*
@@ -246,6 +278,6 @@ void do_cat(char *f, int fd) {
 		fclose(fpfile);
 		fclose(fpsock);
 	}
-	exit(0);
+
 }
 
