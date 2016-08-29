@@ -17,6 +17,8 @@
 #include <unistd.h>
 #include "tinyhttpd.h"
 
+#define CONFIG_FILE_NAME "tinyhttpd.conf"
+
 time_t server_started;
 int server_bytes_sent;
 int server_requests;
@@ -26,15 +28,18 @@ int main(int ac, char *av[]) {
 	int	fd;
 	int *fdptr;
 	
+	struct httpd_conf conf;
+
 	pthread_t worker;
 	pthread_attr_t attr;
 
 	if(ac == 1) {
-		fprintf(stderr, "usage: ./tinyhttpd portnum\n");
-		exit(1);
+		init_conf(&conf);
+		sock_id = make_server_socket(atoi(conf.port));
+	} else if(ac == 2) {
+		sock_id = make_server_socket(atoi(av[1]));
 	}
 
-	sock_id = make_server_socket(atoi(av[1]));
 	if(sock_id == -1) {
 		exit(2);
 	}
@@ -51,6 +56,28 @@ int main(int ac, char *av[]) {
 		*fdptr = fd;
 		pthread_create(&worker, &attr, handle, fdptr);
 	}
+}
+
+/*
+ * initialize the configuration
+ */
+void init_conf(struct httpd_conf *conf) {
+	FILE *fp;
+	char line[BUFSIZ];
+	char param_name[BUFSIZ];
+	char port[BUFSIZ];
+
+	if((fp = fopen(CONFIG_FILE_NAME, "r")) != NULL) {
+		if(fgets(line, BUFSIZ, fp) != NULL) {
+			sscanf(line, "%s %s", param_name, port);
+		}
+	}
+	
+	if(strcmp(param_name, "PORT") == 0) {
+		strcpy(conf->port, port);
+	}
+
+	fclose(fp);
 }
 
 void setup(pthread_attr_t *attrp) {
@@ -168,8 +195,6 @@ int not_exist(char *f) {
 
 void do_ls(char *dir, int fd) {
 	
-	printf("dir: %s\n", dir);
-
 	FILE *socket_fpi, *socket_fpo;
 	FILE *pipe_fp;
 	char command[BUFSIZ];
