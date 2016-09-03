@@ -17,6 +17,7 @@
 #include <unistd.h>
 #include "tinyhttpd.h"
 
+#define error(msg) { perror(msg); }
 #define CONFIG_FILE_NAME "tinyhttpd.conf"
 
 time_t server_started;
@@ -33,6 +34,11 @@ int main(int ac, char *av[]) {
 	pthread_t worker;
 	pthread_attr_t attr;
 
+	if(ac != 1 && ac != 2) {
+		fprintf(stderr, "usage: ./tinyhttpd & || ./tinyhttpd port &\n");
+		return 0;
+	}
+
 	if(ac == 1) {
 		init_conf(&conf);
 		sock_id = make_server_socket(atoi(conf.port));
@@ -41,7 +47,7 @@ int main(int ac, char *av[]) {
 	}
 
 	if(sock_id == -1) {
-		exit(2);
+		error("socket");
 	}
 	
 	setup(&attr);
@@ -98,7 +104,7 @@ void* handle(void *fdptr) {
 
 	fpin = fdopen(fd, "r");
 	fgets(request, BUFSIZ, fpin);
-	printf("get a call: request = %s", request);
+	printf("get a call: request = %s\n", request);
 	read_until_crnl(fpin);
 
 	process_request(request, fd);
@@ -128,7 +134,7 @@ void process_request(char *request, int fd) {
 	
 	strcpy(arg, ".");
 	if(sscanf(request, "%s%s", cmd, arg + 1) != 2) {
-		return;
+		error("sscanf");
 	}
 
 	if(strcmp(cmd, "GET") != 0) {
@@ -152,7 +158,9 @@ void header(FILE *fp, char *content_type) {
 	fprintf(fp, "HTTP/1.1 200 OK\r\n");
 	if(content_type) {
 		fprintf(fp, "Content-type: %s\r\n", content_type);
+	
 	}
+	fprintf(fp, "\r\n");
 }
 
 /*---------------------------------------------------------*
@@ -218,7 +226,7 @@ void do_ls(char *dir, int fd) {
 	fflush(socket_fpo);
 
 	if((pipe_fp = popen(command, "r")) == NULL) {
-		fprintf(stderr, "popen");
+		error("popen");
 	}
 
 	while((c = getc(pipe_fp)) != EOF) {
@@ -259,17 +267,23 @@ int ends_in_cgi(char *f) {
 	return (strcmp(file_type(f), "cgi") == 0);
 }
 
+/*fork一个子进程，提供动态内容*/
 void do_exec(char *prog, int fd) {
 	FILE *fp;
+	pid_t pid;
 
-	fp = fdopen(fd, "w");
-	header(fp, NULL);
-	fflush(fp);
-	dup2(fd, 1);
-	dup2(fd, 2);
-	close(fd);
-	execl(prog, prog, NULL);
-	perror(prog);
+	pid = fork();
+	if(pid == 0) {
+		fp = fdopen(fd, "w");
+		header(fp, "text/html");
+		fflush(fp);
+
+		dup2(fd, 1);
+		dup2(fd, 2);
+		close(fd);
+		execl(prog, prog, NULL);
+		perror(prog);
+	}
 }
 
 /*--------------------------------------------------------*
@@ -296,7 +310,6 @@ void do_cat(char *f, int fd) {
 	fpfile = fopen(f, "r");
 	if(fpsock != NULL && fpfile != NULL) {
 		header(fpsock, content);
-		fprintf(fpsock, "\r\n");
 		while((c = getc(fpfile)) != EOF) {
 			putc(c, fpsock);
 		}
