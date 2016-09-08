@@ -56,7 +56,7 @@ make
 
 *更新于`2016/09/09 00:41:28`*
 
-* 增加`http_header_parser`，将解析`HTTP`请求参数独立出来以便后续增加对`Post`，`Put`等方法的支持。
+* 增加`http_header_parser`，将解析`HTTP`请求参数独立出来，以便后续增加对`Post`、`Put`等方法的支持。
 * 完善注释。
 
 
