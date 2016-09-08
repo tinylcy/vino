@@ -1,3 +1,4 @@
+
 /*store the configuration params*/
 struct httpd_conf {
 	char port[BUFSIZ];
@@ -10,8 +11,8 @@ int connect_to_server(char*, int);
 void init_conf(struct httpd_conf*);
 void setup(pthread_attr_t*);
 void* handle(void*);
-void process_request(char*, int);
-void read_until_crnl(FILE *);
+void process_request(struct http_request_headers*, int);
+// void read_until_crnl(FILE *);
 void header(FILE*, char*);
 
 char *file_type(char*);

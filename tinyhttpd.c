@@ -15,6 +15,7 @@
 #include <pthread.h>
 #include <time.h>
 #include <unistd.h>
+#include "http_headers_parser.h"
 #include "tinyhttpd.h"
 
 #define error(msg) { perror(msg); }
@@ -26,7 +27,7 @@ int server_requests;
 
 int main(int ac, char *av[]) {
 	int sock_id;
-	int	fd;
+	int fd;
 	int *fdptr;
 	
 	struct httpd_conf conf;
@@ -64,9 +65,9 @@ int main(int ac, char *av[]) {
 	}
 }
 
-/*
- * initialize the configuration
- */
+/*-----------------------------------------------------------*
+	initialize the configuration
+  -----------------------------------------------------------*/
 void init_conf(struct httpd_conf *conf) {
 	FILE *fp;
 	char line[BUFSIZ];
@@ -86,6 +87,9 @@ void init_conf(struct httpd_conf *conf) {
 	fclose(fp);
 }
 
+/*-----------------------------------------------------------*
+	set the type of thread
+  -----------------------------------------------------------*/
 void setup(pthread_attr_t *attrp) {
 	pthread_attr_init(attrp);
 	pthread_attr_setdetachstate(attrp, PTHREAD_CREATE_DETACHED);
@@ -95,64 +99,48 @@ void setup(pthread_attr_t *attrp) {
 	server_requests = 0;
 }
 
+/*-----------------------------------------------------------*
+	the execute method of threads
+  -----------------------------------------------------------*/
 void* handle(void *fdptr) {
-	FILE *fpin;
-	char request[BUFSIZ];
+	struct http_request_headers *headers = NULL;
+
 	int fd;
 	fd = *(int*)fdptr;
 	free(fdptr);
 
-	fpin = fdopen(fd, "r");
-	fgets(request, BUFSIZ, fpin);
-	printf("get a call: request = %s\n", request);
-	read_until_crnl(fpin);
-
-	process_request(request, fd);
-
-	fclose(fpin);
+	headers = parse_headers(fd);    /* parse the HTTP request and store the params in headers */
+	process_request(headers, fd);
 
 	return NULL;
 }
 
 /*-----------------------------------------------------------*
-	read_until_crnl(FILE *)
-	skip over all request info until a CRNL is seen
+	handles HTTP requests, creates one thread to handle the 
+	404, ls and cat, but fork a new process to handle exec. 
   -----------------------------------------------------------*/
-void read_until_crnl(FILE *fp) {
-	char buf[BUFSIZ];
-	while(fgets(buf, BUFSIZ, fp) != NULL && strcmp(buf, "\r\n") != 0) {
-		;
-	}
-}
+void process_request(struct http_request_headers *headers, int fd) {
 
-/*-----------------------------------------------------------*
-	process_request(char *request, int fd)
-	handles request in a new process
-  -----------------------------------------------------------*/
-void process_request(char *request, int fd) {
-	char cmd[BUFSIZ], arg[BUFSIZ];
-	
-	strcpy(arg, ".");
-	if(sscanf(request, "%s%s", cmd, arg + 1) != 2) {
-		error("sscanf");
-	}
+	char path[BUFSIZ];
+	strcpy(path, ".");
+	strcat(path, headers->path);    /* [path] is the path of request resources, start with '.' */
 
-	if(strcmp(cmd, "GET") != 0) {
+	if(strcmp(headers->method, "GET") != 0) {
 		cannot_execute(fd);
-	} else if(not_exist(arg)) {
-		do_404(arg, fd);
-	} else if(isdir(arg)) {
-		do_ls(arg, fd);
-	} else if(ends_in_cgi(arg)) {
-		do_exec(arg, fd);
+	} else if(not_exist(path)) {
+		do_404(path, fd);
+	} else if(isdir(path)) {
+		do_ls(path, fd);
+	} else if(ends_in_cgi(path)) {
+		do_exec(path, fd);
 	} else {
-		do_cat(arg, fd);
+		do_cat(path, fd);
 	}
 }
 
 /*---------------------------------------------------------*
-	the reply header thing: all functions need one
-	if content_type is NULL, we don't need send content-type
+	the reply header thing: all functions need one if 
+	content_type is NULL, we don't need send content-type.
   ---------------------------------------------------------*/
 void header(FILE *fp, char *content_type) {
 	fprintf(fp, "HTTP/1.1 200 OK\r\n");
@@ -164,7 +152,7 @@ void header(FILE *fp, char *content_type) {
 }
 
 /*---------------------------------------------------------*
-		cannot_execute(fd) --> unimplement HTTP command
+	unimplement HTTP command.
   ---------------------------------------------------------*/
 void cannot_execute(int fd) {
 	FILE *fp = fdopen(fd, "w");
@@ -178,29 +166,39 @@ void cannot_execute(int fd) {
 }
 
 /*--------------------------------------------------------*
-	do_404(char *item, int fd) --> no such object
+	no such object.
   --------------------------------------------------------*/
-void do_404(char *item, int fd) {
+void do_404(char *path, int fd) {
 	FILE *fp = fdopen(fd, "w");
 
 	fprintf(fp, "HTTP/1.0 404 Not Found\r\n");
 	fprintf(fp, "Content-type: text/plain\r\n");
 	fprintf(fp, "\r\n");
 
-	fprintf(fp, "The item you requeste: %s\r\n is not found\r\n", item);
+	fprintf(fp, "The item you requeste: %s\r\n is not found\r\n", path);
 	fclose(fp);
 }
 
-int isdir(char *f) {
+/*-------------------------------------------------------*
+	the request resource is a directory.
+  -------------------------------------------------------*/
+int isdir(char *path) {
 	struct stat info;
-	return (stat(f, &info) != -1 && S_ISDIR(info.st_mode));
+	return (stat(path, &info) != -1 && S_ISDIR(info.st_mode));
 }
 
-int not_exist(char *f) {
+/*-------------------------------------------------------*
+	the request resource does not exist.
+  -------------------------------------------------------*/
+int not_exist(char *path) {
 	struct stat info;
-	return (stat(f, &info) == -1);
+	return (stat(path, &info) == -1);
 } 
 
+/*-------------------------------------------------------*
+	when the request resource is a directory, list the 
+	directory to client.
+  -------------------------------------------------------*/
 void do_ls(char *dir, int fd) {
 	
 	FILE *socket_fpi, *socket_fpo;
@@ -219,7 +217,6 @@ void do_ls(char *dir, int fd) {
 	}
 
 	sprintf(command, "ls %s", dir);
-	printf("command: %s\n: ", command);
 
 	header(socket_fpo, "text/plain");
 	fprintf(socket_fpo, "\r\n");
@@ -255,19 +252,25 @@ void sanitize(char *str) {
 	the cgi stuff, function to check entension and
 	one to run the program.
   --------------------------------------------------------*/
-char* file_type(char *f) {
+char* file_type(char *path) {
 	char *cp;
-	if((cp = strrchr(f, '.')) != NULL) {
+	if((cp = strrchr(path, '.')) != NULL) {
 		return cp + 1;
 	}
 	return "";
 }
 
-int ends_in_cgi(char *f) {
-	return (strcmp(file_type(f), "cgi") == 0);
+/*-------------------------------------------------------*
+	determine whether the type of request resource is 
+	cgi.
+  -------------------------------------------------------*/
+int ends_in_cgi(char *path) {
+	return (strcmp(file_type(path), "cgi") == 0);
 }
 
-/*fork一个子进程，提供动态内容*/
+/*-------------------------------------------------------*
+  fork a new process to provide dynamic content.
+  -------------------------------------------------------*/
 void do_exec(char *prog, int fd) {
 	FILE *fp;
 	pid_t pid;
@@ -287,11 +290,11 @@ void do_exec(char *prog, int fd) {
 }
 
 /*--------------------------------------------------------*
-  do_cat(char *f, int fd)
-  sends back contents after a header
+  send back contents after a header
   --------------------------------------------------------*/
-void do_cat(char *f, int fd) {
-	char *extension = file_type(f);
+void do_cat(char *path, int fd) {
+	
+	char *extension = file_type(path);
 	char *content = "text/plain";
 	FILE *fpsock, *fpfile;
 	int c;
@@ -305,9 +308,11 @@ void do_cat(char *f, int fd) {
 	} else if(strcmp(extension, "jpeg") == 0) {
 		content = "image/jpeg";
 	}
+	
 
 	fpsock = fdopen(fd, "w");
-	fpfile = fopen(f, "r");
+	fpfile = fopen(path, "r");
+	
 	if(fpsock != NULL && fpfile != NULL) {
 		header(fpsock, content);
 		while((c = getc(fpfile)) != EOF) {
