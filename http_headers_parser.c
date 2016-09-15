@@ -26,12 +26,11 @@ struct http_request_headers* parse_headers(int fd) {
 
 	if(fgets(header_buf, BUFSIZ, fpin) != NULL) {
 		headers = parse_method_path_version(header_buf, headers);
+		read_until_crnl(fpin);
 	} else {
 		perror("fgets");
 	}
-
-	read_until_crnl(fpin);
-
+	
 	return headers;
 
 }

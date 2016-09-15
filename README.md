@@ -1,7 +1,7 @@
 # tinyhttpd
 
 
-`tinyhttpd`是一个超轻量级的 `HTTP Server`
+`tinyhttpd`是一个超轻量型的 `HTTP Server`
 
 ### 使用：
 
@@ -59,6 +59,10 @@ make
 * 增加`http_header_parser`，将解析`HTTP`请求参数独立出来，以便后续增加对`Post`、`Put`等方法的支持。
 * 完善注释。
 
+------------
 
+*更新于`2016/09/15 20:49:05`*
+
+* 在线程中调用`fork`，创建新的进程来运行`CGI`程序（存在隐患）。
 
 

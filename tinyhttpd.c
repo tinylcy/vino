@@ -10,6 +10,7 @@
 #include <sys/socket.h>
 #include <sys/types.h>
 #include <sys/stat.h>
+#include <sys/wait.h>
 #include <ctype.h>
 #include <string.h>
 #include <pthread.h>
@@ -124,6 +125,8 @@ void process_request(struct http_request_headers *headers, int fd) {
 	char path[BUFSIZ];
 	strcpy(path, ".");
 	strcat(path, headers->path);    /* [path] is the path of request resources, start with '.' */
+	
+	printf("request path: %s\n", path);
 
 	if(strcmp(headers->method, "GET") != 0) {
 		cannot_execute(fd);
@@ -276,16 +279,23 @@ void do_exec(char *prog, int fd) {
 	pid_t pid;
 
 	pid = fork();
+	if(pid == -1) {
+		perror("fork");
+		exit(1);	
+	}
+
 	if(pid == 0) {
 		fp = fdopen(fd, "w");
-		header(fp, "text/html");
+		header(fp, NULL);
 		fflush(fp);
-
 		dup2(fd, 1);
 		dup2(fd, 2);
 		close(fd);
 		execl(prog, prog, NULL);
-		perror(prog);
+		exit(0);
+	} else {
+		close(fd);
+		waitpid(pid, NULL, 0);
 	}
 }
 
