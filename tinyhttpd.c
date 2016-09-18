@@ -1,8 +1,6 @@
 /*
- * tinyhttpd.c - a minimal web server
+ * tinyhttpd - a minimum-functional HTTP Server
  *
- * usage: ./tinyhttpd portnum
- * build: gcc tinyhttpd.c socklib.c -o tinyhttpd
  */
 
 #include <stdio.h>
@@ -10,7 +8,6 @@
 #include <sys/socket.h>
 #include <sys/types.h>
 #include <sys/stat.h>
-#include <sys/wait.h>
 #include <ctype.h>
 #include <string.h>
 #include <pthread.h>
@@ -18,6 +15,7 @@
 #include <unistd.h>
 #include "http_headers_parser.h"
 #include "tinyhttpd.h"
+#include "rio.h"
 
 #define error(msg) { perror(msg); }
 #define CONFIG_FILE_NAME "tinyhttpd.conf"
@@ -295,7 +293,7 @@ void do_exec(char *prog, int fd) {
 		exit(0);
 	} else {
 		close(fd);
-		waitpid(pid, NULL, 0);
+		// waitpid(pid, NULL, 0);
 	}
 }
 
