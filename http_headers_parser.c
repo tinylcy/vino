@@ -2,6 +2,7 @@
 #include <stdlib.h>
 #include <string.h>
 #include "http_headers_parser.h"
+#include "rio.h"
 
 /*-------------------------------------------------------*
 	parse the headers of HTTP requset
@@ -13,24 +14,36 @@ struct http_request_headers* parse_headers(int fd) {
 		return NULL;
 	}
 	
+	/*
 	FILE *fpin = fdopen(fd, "r");
 	
 	if(fpin == NULL) {
-		perror("fopen");
-		return NULL;
+	    perror("fopen");
+	   return NULL;
 	}
+	*/
 
 	char header_buf[BUFSIZ];    /* HTTP header */
 	// char host_buf[BUFSIZ];    /* HTTP host */
 	// char user_agent_buf[BUFSIZ];    /* HTTP user-agent */
-
-	if(fgets(header_buf, BUFSIZ, fpin) != NULL) {
+	
+	rio_t rio;
+	rio_readinitb(&rio, fd);
+	if(rio_readlineb(&rio, header_buf, BUFSIZ) != -1) {
 		headers = parse_method_path_version(header_buf, headers);
-		read_until_crnl(fpin);
 	} else {
-		perror("fgets");
+		perror("rio_readlineb");
 	}
 	
+	/*
+	if(fgets(header_buf, BUFSIZ, fpin) != NULL) {
+	    headers = parse_method_path_version(header_buf, headers);
+		read_until_crnl(fpin);
+    } else {
+	    perror("fgets");
+    }
+	*/
+
 	return headers;
 
 }

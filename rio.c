@@ -12,7 +12,7 @@ ssize_t rio_readn(int fd, void *buf, size_t n) {
 	while(nleft > 0) {
 		if((nread = read(fd, bufp, nleft)) < 0) {
 			if(errno == EINTR) {
-				nread = 0;    // interruptrf by sig handler, return and call read() again
+				nread = 0;    // interrupted by sig handler, return and call read() again
 			} else {
 				return -1;    // errno set by read()
 			}
