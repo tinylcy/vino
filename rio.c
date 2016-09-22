@@ -27,7 +27,7 @@ ssize_t rio_readn(int fd, void *buf, size_t n) {
 	return (n - nleft);
 }
 
-ssize_t rio_written(int fd, void *buf, size_t n) {
+ssize_t rio_writen(int fd, void *buf, size_t n) {
 	size_t nleft = n;
 	ssize_t nwritten;
 	char *bufp = buf;

@@ -140,16 +140,21 @@ void process_request(struct http_request_headers *headers, int fd) {
 }
 
 /*---------------------------------------------------------*
-	the reply header thing: all functions need one if 
-	content_type is NULL, we don't need send content-type.
+	return the information HTTP headers about the request.
+	Parameters: the connfd to print the headers on
+		    the status code and the short message
+		    the content type
   ---------------------------------------------------------*/
-void header(FILE *fp, char *content_type) {
-	fprintf(fp, "HTTP/1.1 200 OK\r\n");
+void headers(int fd, int status_code, char *short_msg, char *content_type) {
+	char buf[BUFSIZ];
+	sprintf(buf, "HTTP/1.1 %d %s\r\n", status_code, short_msg);
+	rio_writen(fd, buf, strlen(buf));
 	if(content_type) {
-		fprintf(fp, "Content-type: %s\r\n", content_type);
-	
+		sprintf(buf, "Content-type: %s\r\n", content_type);
+		rio_writen(fd, buf, strlen(buf));
 	}
-	fprintf(fp, "\r\n");
+	sprintf(buf, "\r\n");
+	rio_writen(fd, buf, strlen(buf));
 }
 
 /*---------------------------------------------------------*
@@ -202,38 +207,42 @@ int not_exist(char *path) {
   -------------------------------------------------------*/
 void do_ls(char *dir, int fd) {
 	
-	FILE *socket_fpi, *socket_fpo;
+	// FILE *socket_fpi,*socket_fpo;
 	FILE *pipe_fp;
 	char command[BUFSIZ];
 	int c;
 
-	if((socket_fpi = fdopen(fd, "r")) == NULL) {
-		fprintf(stderr, "fdopen read");
-	}
+	// if((socket_fpi = fdopen(fd, "r")) == NULL) {
+		// fprintf(stderr, "fdopen read");
+	// }
 
 	sanitize(dir);
 
-	if((socket_fpo = fdopen(fd, "w")) == NULL) {
-		fprintf(stderr, "fdopen write");
-	}
+	// if((socket_fpo = fdopen(fd, "w")) == NULL) {
+		// fprintf(stderr, "fdopen write");
+	// }
 
 	sprintf(command, "ls %s", dir);
 
-	header(socket_fpo, "text/plain");
-	fprintf(socket_fpo, "\r\n");
-	fflush(socket_fpo);
+	// header(socket_fpo, "text/plain");
+	headers(fd, 200, "OK", "text/plain");
+
+	// fprintf(socket_fpo, "\r\n");
+	// fflush(socket_fpo);
 
 	if((pipe_fp = popen(command, "r")) == NULL) {
 		error("popen");
 	}
 
 	while((c = getc(pipe_fp)) != EOF) {
-		putc(c, socket_fpo);
+		// putc(c, socket_fpo);
+		rio_writen(fd, &c, 1);
 	}
 
 	pclose(pipe_fp);
-	fclose(socket_fpo);
-	fclose(socket_fpi);
+	close(fd);
+	// fclose(socket_fpo);
+	// fclose(socket_fpi);
 	
 }
 
@@ -273,7 +282,6 @@ int ends_in_cgi(char *path) {
   fork a new process to provide dynamic content.
   -------------------------------------------------------*/
 void do_exec(char *prog, int fd) {
-	FILE *fp;
 	pid_t pid;
 
 	pid = fork();
@@ -283,9 +291,7 @@ void do_exec(char *prog, int fd) {
 	}
 
 	if(pid == 0) {
-		fp = fdopen(fd, "w");
-		header(fp, NULL);
-		fflush(fp);
+		headers(fd, 200, "OK", NULL);
 		dup2(fd, 1);
 		dup2(fd, 2);
 		close(fd);
@@ -293,7 +299,6 @@ void do_exec(char *prog, int fd) {
 		exit(0);
 	} else {
 		close(fd);
-		// waitpid(pid, NULL, 0);
 	}
 }
 
@@ -303,31 +308,29 @@ void do_exec(char *prog, int fd) {
 void do_cat(char *path, int fd) {
 	
 	char *extension = file_type(path);
-	char *content = "text/plain";
-	FILE *fpsock, *fpfile;
+	char *content_type = "text/plain";
+	FILE *fpfile;
 	int c;
 
 	if(strcmp(extension, "html") == 0) {
-		content = "text/html";
+		content_type = "text/html";
 	} else if(strcmp(extension, "gif") == 0) {
-		content = "image/gif";
+		content_type = "image/gif";
 	} else if(strcmp(extension, "jpg") == 0) {
-		content = "image/jpeg";
+		content_type = "image/jpeg";
 	} else if(strcmp(extension, "jpeg") == 0) {
-		content = "image/jpeg";
+		content_type = "image/jpeg";
 	}
 	
-
-	fpsock = fdopen(fd, "w");
 	fpfile = fopen(path, "r");
 	
-	if(fpsock != NULL && fpfile != NULL) {
-		header(fpsock, content);
+	if(fpfile != NULL) {
+		headers(fd, 200, "OK", content_type);
 		while((c = getc(fpfile)) != EOF) {
-			putc(c, fpsock);
+			rio_writen(fd, &c, 1);
 		}
 		fclose(fpfile);
-		fclose(fpsock);
+		close(fd);
 	}
 
 }

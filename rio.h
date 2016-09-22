@@ -13,7 +13,7 @@ typedef struct {
 } rio_t;
 
 ssize_t rio_readn(int fd, void *buf, size_t n);
-ssize_t rio_write(int fd, void *buf, size_t n);
+ssize_t rio_writen(int fd, void *buf, size_t n);
 
 void rio_readinitb(rio_t *rp, int fd);
 
