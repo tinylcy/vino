@@ -16,6 +16,7 @@
 #include "http_headers_parser.h"
 #include "tinyhttpd.h"
 #include "rio.h"
+#include "util.h"
 
 #define error(msg) { perror(msg); }
 #define CONFIG_FILE_NAME "tinyhttpd.conf"
@@ -120,22 +121,22 @@ void* handle(void *fdptr) {
   -----------------------------------------------------------*/
 void process_request(struct http_request_headers *headers, int fd) {
 
-	char path[BUFSIZ];
-	strcpy(path, ".");
-	strcat(path, headers->path);    /* [path] is the path of request resources, start with '.' */
+	char uri[BUFSIZ];
+	strcpy(uri, ".");
+	strcat(uri, headers->uri);    /* [uri] is the path of request resources, start with '.' */
 	
-	printf("request path: %s\n", path);
+	printf("request uri: %s\n", uri);
 
-	if(strcmp(headers->method, "GET") != 0) {
-		cannot_execute(fd);
-	} else if(not_exist(path)) {
-		do_404(path, fd);
-	} else if(isdir(path)) {
-		do_ls(path, fd);
-	} else if(ends_in_cgi(path)) {
-		do_exec(path, fd);
+	if(strcmp(headers->method, "GET")) {
+		not_implement(fd);
+	} else if(!file_exist(uri)) {
+		do_404(uri, fd);
+	} else if(is_directory(uri)) {
+		do_ls(uri, fd);
+	} else if(is_dynamic(uri)) {
+		serve_dynamic(uri, fd);
 	} else {
-		do_cat(path, fd);
+		serve_static(uri, fd);
 	}
 }
 
@@ -160,46 +161,25 @@ void headers(int fd, int status_code, char *short_msg, char *content_type) {
 /*---------------------------------------------------------*
 	unimplement HTTP command.
   ---------------------------------------------------------*/
-void cannot_execute(int fd) {
-	FILE *fp = fdopen(fd, "w");
-
-	fprintf(fp, "HTTP/1.0 501 Not implemented\r\n");
-	fprintf(fp, "Content-type: text/plain\r\n");
-	fprintf(fp, "\r\n");
-
-	fprintf(fp, "That command is not yet implemented\r\n");
-	fclose(fp);
+void not_implement(int fd) {
+	headers(fd, 501, "Not Implemented", "text/html");
+	char buf[] = "tinyhttpd does not implement this method\r\n";
+	rio_writen(fd, buf, strlen(buf));
+	close(fd);
 }
 
 /*--------------------------------------------------------*
 	no such object.
   --------------------------------------------------------*/
-void do_404(char *path, int fd) {
-	FILE *fp = fdopen(fd, "w");
-
-	fprintf(fp, "HTTP/1.0 404 Not Found\r\n");
-	fprintf(fp, "Content-type: text/plain\r\n");
-	fprintf(fp, "\r\n");
-
-	fprintf(fp, "The item you requeste: %s\r\n is not found\r\n", path);
-	fclose(fp);
+void do_404(char *uri, int fd) {
+	headers(fd, 404, "Not Found", "text/html");
+	char buf[BUFSIZ];
+	sprintf(buf, "<h1>The item you request:<I> %s%s </I> is not found</h1>\r\n", uri, "\0");
+	printf("buf: %s\n", buf);
+	rio_writen(fd, buf, strlen(buf));
+	close(fd);
 }
 
-/*-------------------------------------------------------*
-	the request resource is a directory.
-  -------------------------------------------------------*/
-int isdir(char *path) {
-	struct stat info;
-	return (stat(path, &info) != -1 && S_ISDIR(info.st_mode));
-}
-
-/*-------------------------------------------------------*
-	the request resource does not exist.
-  -------------------------------------------------------*/
-int not_exist(char *path) {
-	struct stat info;
-	return (stat(path, &info) == -1);
-} 
 
 /*-------------------------------------------------------*
 	when the request resource is a directory, list the 
@@ -207,52 +187,40 @@ int not_exist(char *path) {
   -------------------------------------------------------*/
 void do_ls(char *dir, int fd) {
 	
-	// FILE *socket_fpi,*socket_fpo;
 	FILE *pipe_fp;
 	char command[BUFSIZ];
 	int c;
 
-	// if((socket_fpi = fdopen(fd, "r")) == NULL) {
-		// fprintf(stderr, "fdopen read");
-	// }
-
-	sanitize(dir);
-
-	// if((socket_fpo = fdopen(fd, "w")) == NULL) {
-		// fprintf(stderr, "fdopen write");
-	// }
-
-	sprintf(command, "ls %s", dir);
-
-	// header(socket_fpo, "text/plain");
 	headers(fd, 200, "OK", "text/plain");
 
-	// fprintf(socket_fpo, "\r\n");
-	// fflush(socket_fpo);
-
+	sprintf(command, "ls %s", dir);
 	if((pipe_fp = popen(command, "r")) == NULL) {
 		error("popen");
 	}
 
 	while((c = getc(pipe_fp)) != EOF) {
-		// putc(c, socket_fpo);
 		rio_writen(fd, &c, 1);
 	}
 
 	pclose(pipe_fp);
 	close(fd);
-	// fclose(socket_fpo);
-	// fclose(socket_fpi);
 	
 }
 
+/*--------------------------------------------------------*
+	sanitize the command to prevent the execution
+	of dangerous commands. such as 'ls ./html/;rm -rf /'
+  --------------------------------------------------------*/
 void sanitize(char *str) {
 	char *src, *dest;
 	src= str;
 	dest = str;
 	for( ; *src; src++) {
-		if(*src == '/' || isalnum(*src)) {
+		if(*src == '/' || *src == '.' || *src == '_'
+					|| *src == '-' || isalnum(*src)) {
 			*dest++ = *src;
+		} else {
+			break;		
 		}
 	}
 	*dest = '\0';
@@ -262,9 +230,9 @@ void sanitize(char *str) {
 	the cgi stuff, function to check entension and
 	one to run the program.
   --------------------------------------------------------*/
-char* file_type(char *path) {
+char* file_type(char *uri) {
 	char *cp;
-	if((cp = strrchr(path, '.')) != NULL) {
+	if((cp = strrchr(uri, '.')) != NULL) {
 		return cp + 1;
 	}
 	return "";
@@ -274,16 +242,27 @@ char* file_type(char *path) {
 	determine whether the type of request resource is 
 	cgi.
   -------------------------------------------------------*/
-int ends_in_cgi(char *path) {
-	return (strcmp(file_type(path), "cgi") == 0);
+int is_dynamic(const char *uri) {
+	return (strstr(uri, DYNAMIC_PATH) != NULL);
 }
 
 /*-------------------------------------------------------*
   fork a new process to provide dynamic content.
+  check if a file is executable at first.
   -------------------------------------------------------*/
-void do_exec(char *prog, int fd) {
+void serve_dynamic(char *prog, int fd) {
+	/* the file is not executable */
+	if(!is_executable(prog)) {
+		headers(fd, 403, "Forbidden", "text/html");
+		char buf[BUFSIZ];
+		sprintf(buf, "<h1>tinyhttpd couldn't run the CGI program: <I>%s</I>.</h1>\r\n", prog);
+		rio_writen(fd, buf, strlen(buf));
+		close(fd);
+		return;
+	}
+	
+	/* the file is executable */
 	pid_t pid;
-
 	pid = fork();
 	if(pid == -1) {
 		perror("fork");
@@ -305,9 +284,9 @@ void do_exec(char *prog, int fd) {
 /*--------------------------------------------------------*
   send back contents after a header
   --------------------------------------------------------*/
-void do_cat(char *path, int fd) {
+void serve_static(char *uri, int fd) {
 	
-	char *extension = file_type(path);
+	char *extension = file_type(uri);
 	char *content_type = "text/plain";
 	FILE *fpfile;
 	int c;
@@ -322,7 +301,7 @@ void do_cat(char *path, int fd) {
 		content_type = "image/jpeg";
 	}
 	
-	fpfile = fopen(path, "r");
+	fpfile = fopen(uri, "r");
 	
 	if(fpfile != NULL) {
 		headers(fd, 200, "OK", content_type);
@@ -334,4 +313,3 @@ void do_cat(char *path, int fd) {
 	}
 
 }
-

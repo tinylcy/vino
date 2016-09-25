@@ -3,7 +3,7 @@
  */
 struct http_request_headers {
 	char *method;
-	char *path;
+	char *uri;
 	char *version;
 	char *host;
 	char *user_agent;

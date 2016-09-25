@@ -13,15 +13,6 @@ struct http_request_headers* parse_headers(int fd) {
 		perror("malloc");
 		return NULL;
 	}
-	
-	/*
-	FILE *fpin = fdopen(fd, "r");
-	
-	if(fpin == NULL) {
-	    perror("fopen");
-	   return NULL;
-	}
-	*/
 
 	char header_buf[BUFSIZ];    /* HTTP header */
 	// char host_buf[BUFSIZ];    /* HTTP host */
@@ -35,15 +26,6 @@ struct http_request_headers* parse_headers(int fd) {
 		perror("rio_readlineb");
 	}
 	
-	/*
-	if(fgets(header_buf, BUFSIZ, fpin) != NULL) {
-	    headers = parse_method_path_version(header_buf, headers);
-		read_until_crnl(fpin);
-    } else {
-	    perror("fgets");
-    }
-	*/
-
 	return headers;
 
 }
@@ -54,14 +36,19 @@ struct http_request_headers* parse_headers(int fd) {
   -------------------------------------------------------*/
 struct http_request_headers* parse_method_path_version(char *header_buf, struct http_request_headers *headers) {
 
-	char method[BUFSIZ], path[BUFSIZ], version[BUFSIZ];
-	sscanf(header_buf, "%s %s %s\r\n", method, path, version);
+	char method[BUFSIZ], uri[BUFSIZ], version[BUFSIZ];
+	sscanf(header_buf, "%s %s %s\r\n", method, uri, version);
 	
-	headers->method = (char*)malloc(sizeof(char) * strlen(method));
+	headers->method = (char*)malloc(sizeof(char) * (strlen(method) + 1));
+	memset(headers->method, 0, strlen(method) + 1);    /* initialize the array to 0 */
 	strcpy(headers->method, method);
-    	headers->path = (char*)malloc(sizeof(char) * strlen(path));
-	strcpy(headers->path, path);
-	headers->version = (char*)malloc(sizeof(char) * strlen(version));
+	
+    	headers->uri = (char*)malloc(sizeof(char) * (strlen(uri) + 1));
+	memset(headers->uri, 0, strlen(uri) + 1);
+	strcpy(headers->uri, uri);
+
+	headers->version = (char*)malloc(sizeof(char) * (strlen(version) + 1));
+	memset(headers->version, 0, strlen(version) + 1);
 	strcpy(headers->version, version);
 	
 	return headers;
