@@ -73,9 +73,19 @@ make
 
 ------------
 
-*更新于`2016/09/25 18:53:21`*
+*更新于`2016/09/25 22:26:10`*
 
-* 增加对资源访问的权限判定、可执行校验。
+* 增加对资源访问的权限判定、可执行和可读校验。
 * 完善`I/O`读取边界处理。
 * 调整代码结构。
 
+### more
+
+* static resources
+
+![Alt Text](https://github.com/tinylcy/tinyhttpd/raw/master/html/static.png)
+
+
+* dynamic resources(CGI)
+
+![Alt Text](https://github.com/tinylcy/tinyhttpd/raw/master/html/dynamic.png)

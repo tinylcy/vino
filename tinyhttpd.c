@@ -175,7 +175,6 @@ void do_404(char *uri, int fd) {
 	headers(fd, 404, "Not Found", "text/html");
 	char buf[BUFSIZ];
 	sprintf(buf, "<h1>The item you request:<I> %s%s </I> is not found</h1>\r\n", uri, "\0");
-	printf("buf: %s\n", buf);
 	rio_writen(fd, buf, strlen(buf));
 	close(fd);
 }
@@ -239,16 +238,16 @@ char* file_type(char *uri) {
 }
 
 /*-------------------------------------------------------*
-	determine whether the type of request resource is 
-	cgi.
+	determine whether the type of request resource is
+	dynamic.
   -------------------------------------------------------*/
 int is_dynamic(const char *uri) {
 	return (strstr(uri, DYNAMIC_PATH) != NULL);
 }
 
 /*-------------------------------------------------------*
-  fork a new process to provide dynamic content.
-  check if a file is executable at first.
+  	fork a new process to provide dynamic content.
+  	check if a cgi program is executable at first.
   -------------------------------------------------------*/
 void serve_dynamic(char *prog, int fd) {
 	/* the file is not executable */
@@ -282,10 +281,21 @@ void serve_dynamic(char *prog, int fd) {
 }
 
 /*--------------------------------------------------------*
-  send back contents after a header
+  	serve static content.
+	check if a file is readable at first.
   --------------------------------------------------------*/
 void serve_static(char *uri, int fd) {
-	
+	/* the file is not readable */
+	if(!is_readable(uri)) {
+		headers(fd, 403, "Forbidden", "text/html");
+		char buf[BUFSIZ];
+		sprintf(buf, "<h1>tinyhttpd couldn't read the file: <I>%s</I>.</h1>\r\n", uri);
+		rio_writen(fd, buf, strlen(buf));
+		close(fd);
+		return;	
+	}
+
+	/* the file is readable */
 	char *extension = file_type(uri);
 	char *content_type = "text/plain";
 	FILE *fpfile;
