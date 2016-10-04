@@ -1,6 +1,6 @@
 /*
  * tinyhttpd - a minimum-functional HTTP Server
- *
+ * usage: ./tinyhttpd & or ./tinyhttpd & portnum
  */
 
 #include <stdio.h>
@@ -13,6 +13,8 @@
 #include <pthread.h>
 #include <time.h>
 #include <unistd.h>
+#include <errno.h>
+#include <dirent.h>
 #include "http_headers_parser.h"
 #include "tinyhttpd.h"
 #include "rio.h"
@@ -26,7 +28,7 @@ int server_bytes_sent;
 int server_requests;
 
 int main(int ac, char *av[]) {
-	int sock_id;
+	int sock_id = -1;
 	int fd;
 	int *fdptr;
 	
@@ -186,22 +188,47 @@ void do_404(char *uri, int fd) {
   -------------------------------------------------------*/
 void do_ls(char *dir, int fd) {
 	
-	FILE *pipe_fp;
-	char command[BUFSIZ];
-	int c;
+	DIR *dirp;
+	struct dirent *dp;
+	char entry[BUFSIZ];
+
+	dirp = opendir(dir);
+	if(dirp == NULL) {
+		perror("opendir");
+		exit(1);
+	}
 
 	headers(fd, 200, "OK", "text/plain");
 
-	sprintf(command, "ls %s", dir);
-	if((pipe_fp = popen(command, "r")) == NULL) {
-		error("popen");
+    /* for each entry in this directory, print filename to client */
+	for(;;) {
+		errno = 0;    /* to distinguish error from end-of-directory */
+		dp = readdir(dirp);
+		if(dp == NULL) {
+			break;
+		}
+
+		if(strcmp(dp->d_name, ".") == 0 || strcmp(dp->d_name, "..") == 0) {
+			continue;    /* skip . and .. */
+		}
+
+		memset(entry, 0, BUFSIZ);
+		strncpy(entry, dp->d_name, strlen(dp->d_name));
+		strcat(entry, "\r\n");
+
+		rio_writen(fd, entry, strlen(entry));
 	}
 
-	while((c = getc(pipe_fp)) != EOF) {
-		rio_writen(fd, &c, 1);
+	if(errno != 0) {
+		perror("readdir");
+		exit(1);
 	}
 
-	pclose(pipe_fp);
+	if(closedir(dirp) == -1) {
+		perror("closedir");
+		exit(1);
+	}
+
 	close(fd);
 	
 }

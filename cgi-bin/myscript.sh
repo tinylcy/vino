@@ -1,3 +1,3 @@
 #!/bin/bash
 
-echo "<html><body><h1>tinyhttpd - a minimum-functional HTTP Server</h1></body></html>"
+printf "<html><body><h1>tinyhttpd - a minimum-functional HTTP Server</h1></body></html>\n"
