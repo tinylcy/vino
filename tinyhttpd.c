@@ -1,6 +1,6 @@
 /*
  * tinyhttpd - a minimum-functional HTTP Server
- * usage: ./tinyhttpd & or ./tinyhttpd & portnum
+ * usage: ./tinyhttpd & or ./tinyhttpd portnum &
  */
 
 #include <stdio.h>
