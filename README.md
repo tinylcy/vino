@@ -37,9 +37,9 @@ make
 * static resources (http://192.168.199.119:8008/html/index.html)
 
 
-![Alt Text](https://github.com/tinylcy/tinyhttpd/raw/master/html/static.png)
+![Alt Text](https://github.com/tinylcy/tinyhttpd/raw/master/doc/static.png)
 
 
 * dynamic resources(CGI) (http://192.168.199.119:8008/cgi-bin/myscript.sh)
 
-![Alt Text](https://github.com/tinylcy/tinyhttpd/raw/master/html/dynamic.png)
+![Alt Text](https://github.com/tinylcy/tinyhttpd/raw/master/doc/dynamic.png)
