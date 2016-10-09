@@ -46,7 +46,7 @@ struct http_request_headers* parse_method_uri_version(char *header_buf, struct h
 	memset(headers->method, 0, strlen(method) + 1);    /* initialize the array to 0 */
 	strcpy(headers->method, method);
 	
-    pivot = strchr(uri_args, '?');
+	pivot = strchr(uri_args, '?');
 	if(pivot != NULL) {    /* without any arguments */
 		uri_len = (int)(pivot - uri_args);
 	} else {
