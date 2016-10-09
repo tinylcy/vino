@@ -129,14 +129,14 @@ void process_request(struct http_request_headers *headers, int fd) {
 	
 	printf("request uri: %s\n", uri);
 
-	if(strcmp(headers->method, "GET")) {
+	if(strcmp(headers->method, "GET") && strcmp(headers->method, "POST")) {
 		not_implement(fd);
 	} else if(!file_exist(uri)) {
 		do_404(uri, fd);
 	} else if(is_directory(uri)) {
 		do_ls(uri, fd);
 	} else if(is_dynamic(uri)) {
-		serve_dynamic(uri, fd);
+		serve_dynamic(headers, fd);
 	} else {
 		serve_static(uri, fd);
 	}
@@ -276,7 +276,12 @@ int is_dynamic(const char *uri) {
   	fork a new process to provide dynamic content.
   	check if a cgi program is executable at first.
   -------------------------------------------------------*/
-void serve_dynamic(char *prog, int fd) {
+void serve_dynamic(struct http_request_headers *request, int fd) {
+	
+	char prog[BUFSIZ];
+	strcpy(prog, ".");
+	strcat(prog, request->uri);
+
 	/* the file is not executable */
 	if(!is_executable(prog)) {
 		headers(fd, 403, "Forbidden", "text/html");
@@ -287,16 +292,30 @@ void serve_dynamic(char *prog, int fd) {
 		return;
 	}
 	
-	/* the file is executable */
+	if(strcmp(request->method, "GET") == 0) {
+		serve_get_dynamic(request, fd);
+	} else if(strcmp(request->method, "POST") == 0) {
+		serve_post_dynamic(request, fd);
+	}
+
+}
+
+void serve_get_dynamic(struct http_request_headers *request, int fd) {
+	
+	char prog[BUFSIZ];
+	strcpy(prog, ".");
+	strcat(prog, request->uri);
+
 	pid_t pid;
 	pid = fork();
 	if(pid == -1) {
 		perror("fork");
-		exit(1);	
+		exit(1);
 	}
 
 	if(pid == 0) {
 		headers(fd, 200, "OK", NULL);
+		setenv("QUERY_STRING", request->query_args, 1);
 		dup2(fd, 1);
 		dup2(fd, 2);
 		close(fd);
@@ -305,6 +324,10 @@ void serve_dynamic(char *prog, int fd) {
 	} else {
 		close(fd);
 	}
+}
+
+void serve_post_dynamic(struct http_request_headers *request, int fd) {
+	
 }
 
 /*--------------------------------------------------------*

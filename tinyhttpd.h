@@ -20,8 +20,12 @@ char *file_type(char*);
 void not_implement(int);
 void do_404(char*, int);
 void do_ls(char*, int);
+
 void serve_static(char *, int);
-void serve_dynamic(char*, int);
+
+void serve_dynamic(struct http_request_headers*, int);
+void serve_get_dynamic(struct http_request_headers*, int);
+void serve_post_dynamic(struct http_request_headers*, int);
 
 void sanitize(char*);
 int is_dynamic(const char*);
