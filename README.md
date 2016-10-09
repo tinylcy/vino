@@ -30,11 +30,11 @@ make
 | 2016/09/22 01:20:16 | 阅读 `CSAPP RIO(Robust I/O)`源码，`RIO`提供了方便、健壮和高效的`I/O`。 <br>  在`tinyhttpd`中引入`RIO`。|
 | 2016/09/25 22:26:10 | 增加对资源访问的权限判定、可执行和可读校验。 <br> 完善`I/O`读取边界处理。<br>  调整代码结构。|
 | 2016/10/04 16:39:52 | 使用`opendir`和`readdir`重写`do_ls`，避免`popen`执行不安全的命令。|
-
+| 2016/10/09 23:20:30 | 扩展`tinyhttpd`对动态请求的支持，`tinyhttpd`支持带有请求参数的`GET`请求，`setenv`将参数设置为当前进程的环境变量，`CGI`程序读取环境变量。|
 
 ### More
 
-* static resources (http://192.168.199.119:8008/html/index.html)
+* static resources (http://192.168.199.119:8008/doc/index.html)
 
 
 ![Alt Text](https://github.com/tinylcy/tinyhttpd/raw/master/doc/static.png)

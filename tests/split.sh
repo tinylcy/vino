@@ -2,9 +2,11 @@
 
 IN="a=2&b=24"
 
-params=$(echo $IN | tr "&" "\n")
+set -f
 
-for pair in $params
-do
-	echo "$pair"
-done
+array=(${IN//&/ })
+
+echo "${array[0]}"
+echo "${array[1]}"
+
+
