@@ -273,8 +273,9 @@ int is_dynamic(const char *uri) {
 }
 
 /*-------------------------------------------------------*
-  	fork a new process to provide dynamic content.
-  	check if a cgi program is executable at first.
+  	serve the dynamic content. check if a cgi program is 
+  	executable at first, then serve the dynamic content 
+  	according to the HTTP method.
   -------------------------------------------------------*/
 void serve_dynamic(struct http_request_headers *request, int fd) {
 	
@@ -300,6 +301,10 @@ void serve_dynamic(struct http_request_headers *request, int fd) {
 
 }
 
+/*-------------------------------------------------------*
+  	fork a new process to serve the HTTP GET dynamic
+  	content.
+  -------------------------------------------------------*/
 void serve_get_dynamic(struct http_request_headers *request, int fd) {
 	
 	char prog[BUFSIZ];
@@ -314,8 +319,15 @@ void serve_get_dynamic(struct http_request_headers *request, int fd) {
 	}
 
 	if(pid == 0) {
-		headers(fd, 200, "OK", NULL);
-		setenv("QUERY_STRING", request->query_args, 1);
+		headers(fd, 200, "OK", "text/html");
+
+		/* set environment variables */
+		if(request->query_args != NULL) {
+			setenv("QUERY_STRING", request->query_args, 1);    
+		} else {
+			setenv("QUERY_STRING", "", 1);
+		}   
+		
 		dup2(fd, 1);
 		dup2(fd, 2);
 		close(fd);
@@ -326,6 +338,10 @@ void serve_get_dynamic(struct http_request_headers *request, int fd) {
 	}
 }
 
+/*-------------------------------------------------------*
+  	fork a new process to serve the HTTP POST dynamic
+  	content.
+  -------------------------------------------------------*/
 void serve_post_dynamic(struct http_request_headers *request, int fd) {
 	
 }
