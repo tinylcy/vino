@@ -140,6 +140,9 @@ void process_request(struct http_request_headers *headers, int fd) {
 	} else {
 		serve_static(uri, fd);
 	}
+
+	// http_request_free(headers);
+
 }
 
 /*---------------------------------------------------------*
