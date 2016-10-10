@@ -343,7 +343,35 @@ void serve_get_dynamic(struct http_request_headers *request, int fd) {
   	content.
   -------------------------------------------------------*/
 void serve_post_dynamic(struct http_request_headers *request, int fd) {
-	
+	char prog[BUFSIZ];
+	strcpy(prog, ".");
+	strcat(prog, request->uri);
+
+	pid_t pid;
+	pid = fork();
+	if(pid == -1) {
+		perror("fork");
+		exit(1);
+	}
+
+	if(pid == 0) {
+		headers(fd, 200, "OK", "text/html");
+
+		/* set environment variables */
+		if(request->post_data != NULL) {
+			setenv("POST_DATA", request->post_data, 1);    
+		} else {
+			setenv("POST_DATAm", "", 1);
+		}   
+		
+		dup2(fd, 1);
+		dup2(fd, 2);
+		close(fd);
+		execl(prog, prog, NULL);
+		exit(0);
+	} else {
+		close(fd);
+	}
 }
 
 /*--------------------------------------------------------*

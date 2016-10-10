@@ -20,8 +20,12 @@ struct http_request_headers* parse_headers(int fd) {
 	
 	rio_t rio;
 	rio_readinitb(&rio, fd);
+
 	if(rio_readlineb(&rio, header_buf, BUFSIZ) != -1) {
 		headers = parse_method_uri_version(header_buf, headers);
+		if(strcmp(headers->method, "POST") == 0) {
+			headers = parse_post_data(fd, headers);
+		}
 	} else {
 		perror("rio_readlineb");
 	}
@@ -46,7 +50,7 @@ struct http_request_headers* parse_method_uri_version(char *header_buf, struct h
 	memset(headers->method, 0, strlen(method) + 1);    /* initialize the array to 0 */
 	strcpy(headers->method, method);
 	
-	pivot = strchr(uri_args, '?');
+	pivot = strchr(uri_args, '?');    /* pivot point to character '?' */
 	if(pivot != NULL) {    /* without any arguments */
 		uri_len = (int)(pivot - uri_args);
 	} else {
@@ -74,10 +78,66 @@ struct http_request_headers* parse_method_uri_version(char *header_buf, struct h
 	return headers;
 }
 
-
-void read_until_crnl(FILE *fp) {
+/*-------------------------------------------------------*
+	parse the HTTP request entity to get post parameters.
+  -------------------------------------------------------*/
+struct http_request_headers* parse_post_data(int fd, struct http_request_headers *request) {
+	
+	rio_t rio;
 	char buf[BUFSIZ];
-	while(fgets(buf, BUFSIZ, fp) != NULL && strcmp(buf, "\r\n") != 0) {
+
+	rio_readinitb(&rio, fd);
+	read_until_crnl(fd);
+	rio_readlineb(&rio, buf, BUFSIZ);    /* skip the rest of HTTP headers */
+
+	request->post_data = (char*)malloc(sizeof(char) * (strlen(buf) + 1));
+	memset(request->post_data, 0, strlen(buf) + 1);
+	strcpy(request->post_data, buf);
+
+	return request;
+
+}
+
+/*-------------------------------------------------------*
+	skip other HTTP headers.
+  -------------------------------------------------------*/
+void read_until_crnl(int fd) {
+
+	char buf[BUFSIZ];
+	rio_t rio;
+	rio_readinitb(&rio, fd);
+
+	while(rio_readlineb(&rio, buf, BUFSIZ) != -1 && strcmp(buf, "\r\n") != 0
+		&& strcmp(buf, "\n") != 0) {
+
 		;
+	}
+
+}
+
+/*-------------------------------------------------------*
+	free the memory of parsed HTTP headers.
+  -------------------------------------------------------*/
+void http_request_free(struct http_request_headers *request) {
+	if(request->method != NULL) {
+		free(request->method);
+	}
+	if(request->uri != NULL) {
+		free(request->uri);
+	}
+	if(request->query_args != NULL) {
+		free(request->query_args);
+	}
+	if(request->version != NULL) {
+		free(request->version);
+	}
+	if(request->host != NULL) {
+		free(request->host);
+	}
+	if(request->user_agent != NULL) {
+		free(request->user_agent);
+	}
+	if(request->post_data != NULL) {
+		free(request->post_data);
 	}
 }
