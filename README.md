@@ -18,20 +18,27 @@ make
 
 ### Logs：
 
-| Time         | Log           | 
-| :------------- |:-------------|
-| 2016/08/22 01:41:34 | `tinyhttpd`仅支持`GET`请求。<br> 对于每个`HTTP`请求，`fork`一个进程去处理。 |
-| 2016/08/28 02:21:30 | 对于每个请求，不再由单独的进程来处理，而是由同一个进程的多个线程来处理。<br> 为了防止僵尸线程`(Zombie Threads)`，创建不需要返回的线程，称之为**独立线程**。 <br>  ~~~待解决：修复独立线程返回后主线程也随之退出的问题。~~~|
-| 2016/08/29 00:01:35 | 修复子线程执行完毕后导致主线程也随之退出的`bug`。 <br> 重新实现`do_ls`，使用`popen`读取`ls`程序的输出。|
-| 2016/08/30 01:53:08 | 增加配置文件，设置默认端口。|
-| 2016/09/04 00:53:57 | 增加对`CGI`的支持。|
-| 2016/09/09 00:41:28 | 增加`http_header_parser`，将解析`HTTP`请求参数独立出来，以便后续增加对`Post`、`Put`等方法的支持。<br> 完善注释。|
-| 2016/09/15 20:49:05 | 在线程中调用`fork`，创建新的进程来运行`CGI`程序（存在隐患）。|
-| 2016/09/22 01:20:16 | 阅读 `CSAPP RIO(Robust I/O)`源码，`RIO`提供了方便、健壮和高效的`I/O`。 <br>  在`tinyhttpd`中引入`RIO`。|
-| 2016/09/25 22:26:10 | 增加对资源访问的权限判定、可执行和可读校验。 <br> 完善`I/O`读取边界处理。<br>  调整代码结构。|
-| 2016/10/04 16:39:52 | 使用`opendir`和`readdir`重写`do_ls`，避免`popen`执行不安全的命令。|
-| 2016/10/09 23:20:30 | 扩展`tinyhttpd`对动态请求的支持，`tinyhttpd`支持带有请求参数的`GET`请求，`setenv`将参数设置为当前进程的环境变量，`CGI`程序读取环境变量。|
-| 2016/10/11 01:10:27 | `tinyhttpd`支持`POST`请求。 <br> ~~~待解决：`pointer being freed was not allocated.`~~~|
+* Mon Aug 22 01:42:21 2016: tinyhttpd only supports HTTP GET request, for each HTTP request，tinyhttpd fork a new process to handle it.
+
+* Sun Aug 28 02:27:19 2016: Each dynamic request are still handled by a process, but other requests are handled by the same process of multiple threads to deal with. To avoid the Zombie Threads, tinyhttpd creates the threads which don't need to return.
+
+* Mon Aug 29 00:02:55 2016: tinyhttpd reads the standard output of the execution of command 'ls' by popen, which helps to implement do_ls.
+
+* Tue Aug 30 02:00:47 2016: Adding the configuration file which only contains the default port number at present.
+
+* Sun Sep 4 00:58:56 2016: Adding the support for CGI program.
+
+* Fri Sep 9 00:55:37 2016: Making the process of parsing the HTTP request headers as an independent work in order to better support more HTTP methods, like POST.
+
+* Thu Sep 22 01:20:36 2016: Reading the source code of RIO(Robust I/O) in CSAPP, RIO achieves the convenient, robust and efficient I/O.
+
+* Sun Sep 25 22:31:34 2016: Before accessing the static resources or executing the CGI programs, tinyhttpd will examine the corresponding permissions.
+
+* Tue Oct 4 16:58:00 2016: Due to the risk of executing dangerous commands by popen, tinyhttpd reimplements the do_ls by opendir and readdir.
+
+* Sun Oct 9 23:30:23 2016: Expanding the support for dynamic requests. tinyhttpd supports the HTTP GET requests with parameters, the parameters are passed by setting the environment variables and CGI programs fetch these parameters.
+
+* Tue Oct 11 01:11:15 2016: tinyhttpd now supports the HTTP POST.
 
 
 
