@@ -127,7 +127,7 @@ void process_request(struct http_request_headers *headers, int fd) {
 	strcpy(uri, ".");
 	strcat(uri, headers->uri);    /* [uri] is the path of request resources, start with '.' */
 	
-	printf("request uri: %s\n", uri);
+	// printf("request uri: %s\n", uri);
 
 	if(strcmp(headers->method, "GET") && strcmp(headers->method, "POST")) {
 		not_implement(fd);
@@ -141,7 +141,7 @@ void process_request(struct http_request_headers *headers, int fd) {
 		serve_static(uri, fd);
 	}
 
-	// http_request_free(headers);
+	http_request_free(headers);
 
 }
 

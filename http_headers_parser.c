@@ -8,15 +8,18 @@
 	parse the headers of HTTP requset
   -------------------------------------------------------*/
 struct http_request_headers* parse_headers(int fd) {
+
 	struct http_request_headers *headers = (struct http_request_headers*)malloc(sizeof(struct http_request_headers));
 	if(headers == NULL) {
 		perror("malloc");
 		return NULL;
 	}
 
+	/* initialize the struct */
+	memset(headers, 0, sizeof(struct http_request_headers));
+	init_headers(headers);
+
 	char header_buf[BUFSIZ];    /* HTTP header */
-	// char host_buf[BUFSIZ];    /* HTTP host */
-	// char user_agent_buf[BUFSIZ];    /* HTTP user-agent */
 	
 	rio_t rio;
 	rio_readinitb(&rio, fd);
@@ -99,6 +102,19 @@ struct http_request_headers* parse_post_data(int fd, struct http_request_headers
 }
 
 /*-------------------------------------------------------*
+	initialize the HTTP headers.
+  -------------------------------------------------------*/
+void init_headers(struct http_request_headers *headers) {
+	headers->method = NULL;
+	headers->uri = NULL;
+	headers->query_args = NULL;
+	headers->version = NULL;
+	headers->host = NULL;
+	headers->user_agent = NULL;
+	headers->post_data = NULL;
+}
+
+/*-------------------------------------------------------*
 	skip other HTTP headers.
   -------------------------------------------------------*/
 void read_until_crnl(int fd) {
@@ -139,5 +155,8 @@ void http_request_free(struct http_request_headers *request) {
 	}
 	if(request->post_data != NULL) {
 		free(request->post_data);
+	}
+	if(request != NULL) {
+		free(request);
 	}
 }
