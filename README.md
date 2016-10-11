@@ -44,12 +44,12 @@ make
 
 ### More
 
-* static resources (http://192.168.199.119:8008/doc/index.html)
+* STATIC RESOURCES (http://your ip:your port/doc/index.html)
 
 
 ![Alt Text](https://github.com/tinylcy/tinyhttpd/raw/master/doc/static.png)
 
 
-* dynamic resources(CGI) (http://192.168.199.119:8008/cgi-bin/myscript.sh)
+* DYNAMIC RESOURCES(CGI) (http://your ip:your port/cgi-bin/myscript.sh)
 
 ![Alt Text](https://github.com/tinylcy/tinyhttpd/raw/master/doc/dynamic.png)
