@@ -1,20 +1,15 @@
 # tinyhttpd
 
 
-tinyhttpd is a minimum functional HTTP Server
+tinyhttpd is a minimum functional HTTP server written in the C programming language.
 
 ### Compile and run：
 
-```cmake
-make
-./tinyhttpd &
-```
-The default port is 8008.
-Or
-```cmake
-make
- ./tinyhttpd port &
-```
+On Linux system or on Mac simply use Makefile to compile the server.
+
+To run the server type `./tinyhttpd &` into a terminal that is in the directory where the executable file is located.
+
+By default the server runs on port 8008, if you want to assign other port for the server, run it as `./tinyhttpd port &`.
 
 ### Logs：
 
