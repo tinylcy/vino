@@ -3,7 +3,7 @@
 
 tinyhttpd is a minimum functional HTTP server written in the C programming language.
 
-### Compile and run：
+## Compile and run
 
 On Linux system or on Mac simply use Makefile to compile the server.
 
@@ -11,7 +11,7 @@ To run the server type `./tinyhttpd &` into a terminal that is in the directory 
 
 By default the server runs on port 8008, if you want to assign other port for the server, run it as `./tinyhttpd port &`.
 
-### Logs：
+## Logs
 
 * Mon Aug 22 01:42:21 2016: tinyhttpd only supports HTTP GET request, for each HTTP request，tinyhttpd fork a new process to handle it.
 
@@ -37,7 +37,7 @@ By default the server runs on port 8008, if you want to assign other port for th
 
 
 
-### More
+## More
 
 * STATIC RESOURCES (http://your ip:your port/doc/index.html)
 
