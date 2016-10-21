@@ -5,7 +5,7 @@ tinyhttpd is a minimum functional HTTP server written in the C programming langu
 
 ## Compile and run
 
-On Linux system or on Mac simply use Makefile to compile the server.
+On Linux or on Mac OS X simply use Makefile to compile the server.
 
 To run the server type `./tinyhttpd &` into a terminal that is in the directory where the executable file is located.
 

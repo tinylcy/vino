@@ -1,6 +1,6 @@
 /*
- * tinyhttpd - a minimum-functional HTTP Server
- * usage: ./tinyhttpd & or ./tinyhttpd portnum &
+ * Copyright (C) Chenyang Li
+ * Copyright (C) tinyhttpd
  */
 
 #include <stdio.h>
@@ -19,6 +19,7 @@
 #include "tinyhttpd.h"
 #include "rio.h"
 #include "util.h"
+#include "error.h"
 
 #define error(msg) { perror(msg); }
 #define CONFIG_FILE_NAME "tinyhttpd.conf"
