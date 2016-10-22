@@ -3,8 +3,9 @@
 #include "threadpool.h"
 
 threadpool_t* threadpool_init(int thread_num, int job_max_num) {
+
 	threadpool_t *pool = NULL;
-	pool = malloc(sizeof(threadpool_t));
+	pool = (threadpool_t *)malloc(sizeof(threadpool_t));
 
 	do {
 
@@ -39,7 +40,7 @@ threadpool_t* threadpool_init(int thread_num, int job_max_num) {
 			exit(1);
 		}
 
-		pool->pthreads = malloc(sizeof(pthread_t) * thread_num);
+		pool->pthreads = (pthread_t *)malloc(sizeof(pthread_t) * thread_num);
 
 		pool->queue_close = 0;
 		pool->pool_close = 0;
@@ -90,7 +91,7 @@ int threadpool_add_job(threadpool_t *pool, callback_func p_callback_func, void *
 
 	if(pool->head == NULL) {
 		pool->head = pool->tail = pjob;
-		// 队列空的时候，有任务来了，就通知线程池中的线程：队列飞空。
+		// 队列空的时候，有任务来了，就通知线程池中的线程：队列非空。
 		pthread_cond_broadcast(&(pool->queue_not_empty));
 	} else {
 		pool->tail->next = pjob;
