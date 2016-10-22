@@ -35,7 +35,7 @@ By default the server runs on port 8008, if you want to assign other port for th
 
 * Tue Oct 11 01:11:15 2016: tinyhttpd now supports the HTTP POST.
 
-* Sun Oct 23 00:36:18 2016: A thread pool is created to fix the number of threads, from which the CPU overheads of scheduling the threads can be reduced.
+* Sun Oct 23 00:36:18 2016: A thread pool is created with fixed number of threads, from which the CPU overheads of scheduling the threads can be reduced.
 
 
 
