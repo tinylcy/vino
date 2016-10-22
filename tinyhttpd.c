@@ -20,6 +20,7 @@
 #include "rio.h"
 #include "util.h"
 #include "error.h"
+#include "threadpool.h"
 
 #define error(msg) { perror(msg); }
 #define CONFIG_FILE_NAME "tinyhttpd.conf"
@@ -35,8 +36,8 @@ int main(int ac, char *av[]) {
 	
 	struct httpd_conf conf;
 
-	pthread_t worker;
-	pthread_attr_t attr;
+	// pthread_t worker;
+	// pthread_attr_t attr;
 
 	if(ac != 1 && ac != 2) {
 		fprintf(stderr, "usage: ./tinyhttpd & || ./tinyhttpd port &\n");
@@ -54,7 +55,9 @@ int main(int ac, char *av[]) {
 		error("socket");
 	}
 	
-	setup(&attr);
+	// setup(&attr);
+
+	threadpool_t *pool = threadpool_init(100, 100);
 
 	/*
 	 * main loop
@@ -64,7 +67,9 @@ int main(int ac, char *av[]) {
 		server_requests++;
 		fdptr = (int*)malloc(sizeof(int));
 		*fdptr = fd;
-		pthread_create(&worker, &attr, handle, fdptr);
+		// pthread_create(&worker, &attr, handle, fdptr);
+		
+		threadpool_add_job(pool, handle, fdptr);
 	}
 }
 
