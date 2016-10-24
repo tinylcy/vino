@@ -14,9 +14,9 @@ By default the server runs on port 8008, if you want to assign other port for th
 
 ## Programming modal
 
--[] epoll
--[] non-blocking I/O
--[x] threadpool
+- [ ] epoll
+- [ ] non-blocking I/O
+- [x] threadpool
 
 ## More
 
