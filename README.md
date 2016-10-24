@@ -12,7 +12,7 @@ To run the server type `./tinyhttpd &` into a terminal that is in the directory 
 By default the server runs on port 8008, if you want to assign other port for the server, run it as `./tinyhttpd port &`.
 
 
-## Programming modal
+## Programming model
 
 - [ ] epoll
 - [ ] non-blocking I/O
