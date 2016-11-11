@@ -36,9 +36,6 @@ int main(int ac, char *av[]) {
 	
 	struct httpd_conf conf;
 
-	// pthread_t worker;
-	// pthread_attr_t attr;
-
 	if(ac != 1 && ac != 2) {
 		fprintf(stderr, "usage: ./tinyhttpd & || ./tinyhttpd port &\n");
 		return 0;
@@ -46,7 +43,8 @@ int main(int ac, char *av[]) {
 
 	if(ac == 1) {
 		init_conf(&conf);
-		sock_id = make_server_socket(atoi(conf.port));
+
+		sock_id = make_server_socket(conf.port);
 	} else if(ac == 2) {
 		sock_id = make_server_socket(atoi(av[1]));
 	}
@@ -55,9 +53,16 @@ int main(int ac, char *av[]) {
 		error("socket");
 	}
 	
-	// setup(&attr);
+	if(conf.thread_num == 0 || conf.job_max_num == 0) {
+		perror("the thread_num is 0 or the job_max_num is 0");
+		exit(EXIT_FAILURE);
+	}
 
-	threadpool_t *pool = threadpool_init(100, 100);
+	threadpool_t *pool = threadpool_init(conf.thread_num, conf.job_max_num);
+	if(pool == NULL) {
+		perror("fail to initialize the threadpool");
+		exit(EXIT_FAILURE);
+	}
 
 	/*
 	 * main loop
@@ -67,29 +72,40 @@ int main(int ac, char *av[]) {
 		server_requests++;
 		fdptr = (int*)malloc(sizeof(int));
 		*fdptr = fd;
-		// pthread_create(&worker, &attr, handle, fdptr);
 		
 		threadpool_add_job(pool, handle, fdptr);
 	}
+
+	printf("exit tinyhttpd.");
+
+	return 0;
 }
 
 /*-----------------------------------------------------------*
 	initialize the configuration
   -----------------------------------------------------------*/
 void init_conf(struct httpd_conf *conf) {
-	FILE *fp;
+	FILE *fp = NULL;
 	char line[BUFSIZ];
 	char param_name[BUFSIZ];
-	char port[BUFSIZ];
+	char param_value[BUFSIZ];
 
-	if((fp = fopen(CONFIG_FILE_NAME, "r")) != NULL) {
-		if(fgets(line, BUFSIZ, fp) != NULL) {
-			sscanf(line, "%s %s", param_name, port);
-		}
+	if((fp = fopen(CONFIG_FILE_NAME, "r")) == NULL) {
+		perror("fail to open the configuration file.");
+		exit(EXIT_FAILURE);
 	}
 	
-	if(strcmp(param_name, "PORT") == 0) {
-		strcpy(conf->port, port);
+	while(fgets(line, BUFSIZ, fp) != NULL) {
+		sscanf(line, "%s %s", param_name, param_value);
+		if(strcmp(param_name, PORT) == 0) {
+			conf->port = atoi(param_value);
+		}
+		if(strcmp(param_name, THREAD_NUM) == 0) {
+			conf->thread_num = atoi(param_value);
+		}
+		if(strcmp(param_name, JOB_MAX_NUM) == 0) {
+			conf->job_max_num = atoi(param_value);
+		}
 	}
 
 	fclose(fp);
@@ -133,8 +149,6 @@ void process_request(struct http_request_headers *headers, int fd) {
 	strcpy(uri, ".");
 	strcat(uri, headers->uri);    /* [uri] is the path of request resources, start with '.' */
 	
-	// printf("request uri: %s\n", uri);
-
 	if(strcmp(headers->method, "GET") && strcmp(headers->method, "POST")) {
 		not_implement(fd);
 	} else if(!file_exist(uri)) {

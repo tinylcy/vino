@@ -1,8 +1,13 @@
 #define DYNAMIC_PATH "cgi-bin"
+#define PORT "PORT"
+#define THREAD_NUM "THREAD_NUM"
+#define JOB_MAX_NUM "JOB_MAX_NUM"
 
 /* store the configuration params */
 struct httpd_conf {
-	char port[BUFSIZ];
+	int port;
+    int thread_num;
+	int job_max_num;
 };
 
 int make_server_socket_q(int, int);
@@ -10,7 +15,6 @@ int make_server_socket(int);
 int connect_to_server(char*, int);
 
 void init_conf(struct httpd_conf*);
-void setup(pthread_attr_t*);
 void* handle(void*);
 void process_request(struct http_request_headers*, int);
 void header(FILE*, char*);
