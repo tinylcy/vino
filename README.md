@@ -5,6 +5,8 @@ tinyhttpd is a minimum functional HTTP server written in the C programming langu
 
 ## Compile and run
 
+For now tinyhttpd only support Linux 2.6 or later.
+
 Please make sure you have [cmake](https://cmake.org) installed.
 
 ```cmake
@@ -18,8 +20,8 @@ By default the server runs on port 8008, if you want to assign other port for th
 
 ## Programming model
 
-- [ ] epoll
-- [ ] non-blocking I/O
+- [x] epoll
+- [x] non-blocking I/O
 - [x] threadpool
 
 ## More

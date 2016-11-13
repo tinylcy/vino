@@ -68,22 +68,72 @@ int main(int ac, char *av[]) {
 		perror("fail to initialize the threadpool");
 		exit(EXIT_FAILURE);
 	}
-
+	
 	/*
-	 * main loop
+	 * create epoll and add listenfd to interest list
 	 */
+	int epfd = http_epoll_create(0);
+	struct epoll_event event;
+	event.data.fd = listenfd;
+	event.events = EPOLLIN | EPOLLET;
+	http_epoll_add(epfd, listenfd, &event);
+	
+	int i, n;
+
 	while(1) {
-		fd = accept(listenfd, NULL, NULL);
-		if(fd < 0) {
-			continue;
+		n = http_epoll_wait(epfd, evlist, MAXEVENTS, -1);
+	
+		for(i = 0; i < n; i++) {
+			fd = evlist[i].data.fd;
+			if(fd == listenfd) {
+				int clientfd;
+				while(1) {
+					clientfd = accept(listenfd, NULL, NULL);
+					if(clientfd < 0) {
+						if((errno == EAGAIN) || (errno == EWOULDBLOCK)) {
+							break;
+						} else {
+							perror("accept");
+							break;
+						}
+					}
+
+					if(make_socket_non_blocking(clientfd) != 0) {
+						perror("make_socket_non_blocking");
+					}
+					event.data.fd = clientfd;
+					event.events = EPOLLIN | EPOLLET;
+					http_epoll_add(epfd, clientfd, &event);
+				}
+
+			} else {
+				if(evlist[i].events & EPOLLIN) {
+					fdptr = (int *)malloc(sizeof(int));
+					*fdptr = fd;
+
+					threadpool_add_job(pool, handle, fdptr);
+					//free(fdptr);
+					fdptr = NULL;
+
+				} else if(evlist[i].events & (EPOLLHUP | EPOLLERR)) {
+					close(fd);
+				}
+			}
 		}
-		printf("fd: %d\n", fd);
-		server_requests++;
-		fdptr = (int*)malloc(sizeof(int));
-		*fdptr = fd;
-		
-		threadpool_add_job(pool, handle, fdptr);
 	}
+
+	//while(1) {
+	//	fd = accept(listenfd, NULL, NULL);
+	//	if(fd < 0) {
+	//		continue;
+	//	}
+	//	printf("fd: %d\n", fd);
+	//	server_requests++;
+	//	fdptr = (int*)malloc(sizeof(int));
+	//	*fdptr = fd;
+	//	
+	//	threadpool_add_job(pool, handle, fdptr);
+	//}
 
 	printf("exit tinyhttpd.");
 
