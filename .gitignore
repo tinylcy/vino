@@ -51,3 +51,5 @@ Mkfile.old
 dkms.conf
 
 tinyhttpd
+
+/build/*

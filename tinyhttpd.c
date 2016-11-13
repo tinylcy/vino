@@ -30,7 +30,7 @@ int server_bytes_sent;
 int server_requests;
 
 int main(int ac, char *av[]) {
-	int sock_id = -1;
+	int listenfd = -1;
 	int fd;
 	int *fdptr;
 	
@@ -43,14 +43,18 @@ int main(int ac, char *av[]) {
 
 	if(ac == 1) {
 		init_conf(&conf);
-
-		sock_id = make_server_socket(conf.port);
+		listenfd = make_server_socket(conf.port);
 	} else if(ac == 2) {
-		sock_id = make_server_socket(atoi(av[1]));
+		listenfd = make_server_socket(atoi(av[1]));
 	}
 
-	if(sock_id == -1) {
+	if(listenfd == -1) {
 		error("socket");
+	}
+
+	if(make_socket_non_blocking(listenfd) != 0) {
+		perror("make_socket_non_blocking");
+		exit(EXIT_FAILURE);
 	}
 	
 	if(conf.thread_num == 0 || conf.job_max_num == 0) {
@@ -68,7 +72,11 @@ int main(int ac, char *av[]) {
 	 * main loop
 	 */
 	while(1) {
-		fd = accept(sock_id, NULL, NULL);
+		fd = accept(listenfd, NULL, NULL);
+		if(fd < 0) {
+			continue;
+		}
+		printf("fd: %d\n", fd);
 		server_requests++;
 		fdptr = (int*)malloc(sizeof(int));
 		*fdptr = fd;

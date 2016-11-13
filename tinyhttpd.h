@@ -14,6 +14,8 @@ int make_server_socket_q(int, int);
 int make_server_socket(int);
 int connect_to_server(char*, int);
 
+int make_socket_non_blocking(int);
+
 void init_conf(struct httpd_conf*);
 void* handle(void*);
 void process_request(struct http_request_headers*, int);

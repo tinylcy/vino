@@ -1,16 +1,6 @@
 /*
- * socklib.c
- *
- * socklib.c 包含了创建客户端/服务端程序时常用到的函数。
- * 主要包含：
- * 
- * 建立服务端socket
- * int make_server_socket(int portnum);
- *
- * 建立到服务端的连接
- * int make_server_sorket_q(int portnum, int backlog);
- *
- * int connect_to_server(char *hostname, int portnum);
+ * Copyright (C) Chenyang Li
+ * Copyright (C) tinyhttpd
  */
 
 #include <stdio.h>
@@ -20,19 +10,16 @@
 #include <netinet/in.h>
 #include <netdb.h>
 #include <unistd.h>
+#include <fcntl.h>
 #include <time.h>
 #include <strings.h>
-
-#define HOSTLEN 256
-#define BACKLOG 1
-
-int make_server_socket_q(int, int);
+#include "socklib.h"
 
 int make_server_socket(int port) {
-	return make_server_socket_q(port, BACKLOG);
+	return make_server_socket_back(port, BACKLOG);
 }
 
-int make_server_socket_q(int port, int backlog) {
+int make_server_socket_back(int port, int backlog) {
 	struct sockaddr_in servaddr;
 	struct hostent *hp;
 	char hostname[BUFSIZ];
@@ -45,7 +32,7 @@ int make_server_socket_q(int port, int backlog) {
 	}
 
 	/*
-	 * 创建地址并将地址绑定到socket
+	 * create address and bind it to socket.
 	 */
 	bzero((void*)&servaddr, sizeof(servaddr));
 	gethostname(hostname, HOSTLEN);
@@ -60,7 +47,7 @@ int make_server_socket_q(int port, int backlog) {
 	}
 
 	/*
-	 * 开启对socket的监听
+	 * start listening to the socket.
 	 */
 	if(listen(sock_id, backlog) != 0) {
 		fprintf(stderr, "listen");
@@ -94,4 +81,22 @@ int connect_to_server(char *host, int portnum) {
 	}
 
 	return sock_id;
+}
+
+int make_socket_non_blocking(int sfd) {
+	int flags, s;
+	flags = fcntl(sfd, F_GETFL, 0);
+	if(flags == -1) {
+		perror("fcntl");
+		return -1;
+	}
+
+	flags |= O_NONBLOCK;
+	s = fcntl(sfd, F_SETFL, flags);
+	if(s == -1) {
+		perror("fcntl");
+		return -1;
+	}
+
+	return 0;
 }
