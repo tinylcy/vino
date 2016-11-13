@@ -21,6 +21,7 @@
 #include "util.h"
 #include "error.h"
 #include "threadpool.h"
+#include "http_epoll.h"
 
 #define error(msg) { perror(msg); }
 #define CONFIG_FILE_NAME "tinyhttpd.conf"
