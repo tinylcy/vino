@@ -17,6 +17,7 @@
 #include <dirent.h>
 #include "http_headers_parser.h"
 #include "tinyhttpd.h"
+#include "socketlib.h"
 #include "rio.h"
 #include "util.h"
 #include "error.h"
@@ -80,16 +81,30 @@ int main(int ac, char *av[]) {
 	
 	int i, n;
 
+	printf("\ntinyhttpd started successfully!\n");
+
 	while(1) {
+
 		n = http_epoll_wait(epfd, evlist, MAXEVENTS, -1);
-	
+		if(n == -1) {
+			if(errno == EINTR) {
+				continue;
+			}
+			perror("epoll wait error");
+			return -1;
+		}
+
 		for(i = 0; i < n; i++) {
 			fd = evlist[i].data.fd;
 			if(fd == listenfd) {
-				int clientfd;
+				/*
+				 * we have a notification on the listening socket,
+				 * which means one or more incoming connections.
+				 */
+				int connfd;
 				while(1) {
-					clientfd = accept(listenfd, NULL, NULL);
-					if(clientfd < 0) {
+					connfd = accept(listenfd, NULL, NULL);
+					if(connfd < 0) {
 						if((errno == EAGAIN) || (errno == EWOULDBLOCK)) {
 							break;
 						} else {
@@ -98,21 +113,25 @@ int main(int ac, char *av[]) {
 						}
 					}
 
-					if(make_socket_non_blocking(clientfd) != 0) {
+					if(make_socket_non_blocking(connfd) != 0) {
 						perror("make_socket_non_blocking");
 					}
-					event.data.fd = clientfd;
+					event.data.fd = connfd;
 					event.events = EPOLLIN | EPOLLET;
-					http_epoll_add(epfd, clientfd, &event);
+					http_epoll_add(epfd, connfd, &event);
 				}
 
 			} else {
 				if(evlist[i].events & EPOLLIN) {
+					/*
+					 * in this case, we have to malloc an
+					 * extra space to store fd, CASPP page 661
+					 * explains the reason.
+					 */
 					fdptr = (int *)malloc(sizeof(int));
 					*fdptr = fd;
 
 					threadpool_add_job(pool, handle, fdptr);
-					//free(fdptr);
 					fdptr = NULL;
 
 				} else if(evlist[i].events & (EPOLLHUP | EPOLLERR)) {
@@ -443,7 +462,7 @@ void serve_post_dynamic(struct http_request_headers *request, int fd) {
 		if(request->post_data != NULL) {
 			setenv("POST_DATA", request->post_data, 1);    
 		} else {
-			setenv("POST_DATAm", "", 1);
+			setenv("POST_DATA", "", 1);
 		}   
 		
 		dup2(fd, 1);

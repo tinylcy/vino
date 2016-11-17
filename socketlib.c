@@ -13,7 +13,7 @@
 #include <fcntl.h>
 #include <time.h>
 #include <strings.h>
-#include "socklib.h"
+#include "socketlib.h"
 
 int make_server_socket(int port) {
 	return make_server_socket_back(port, BACKLOG);
