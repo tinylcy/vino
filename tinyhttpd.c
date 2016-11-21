@@ -21,6 +21,7 @@
 #include "rio.h"
 #include "util.h"
 #include "error.h"
+#include "debug.h"
 #include "threadpool.h"
 #include "http_epoll.h"
 
@@ -51,22 +52,23 @@ int main(int ac, char *av[]) {
 	}
 
 	if(listenfd == -1) {
-		error("socket");
+		log_err("fail to make server socket.");
+		exit(EXIT_FAILURE);
 	}
 
 	if(make_socket_non_blocking(listenfd) != 0) {
-		perror("make_socket_non_blocking");
+		log_err("fail to make socket non_blocking.");
 		exit(EXIT_FAILURE);
 	}
 	
 	if(conf.thread_num == 0 || conf.job_max_num == 0) {
-		perror("the thread_num is 0 or the job_max_num is 0");
+		log_err("the thread_num is 0 or the job_max_num is 0.");
 		exit(EXIT_FAILURE);
 	}
 
 	threadpool_t *pool = threadpool_init(conf.thread_num, conf.job_max_num);
 	if(pool == NULL) {
-		perror("fail to initialize the threadpool");
+		log_err("fail to initialize the threadpool.");
 		exit(EXIT_FAILURE);
 	}
 	
@@ -78,7 +80,8 @@ int main(int ac, char *av[]) {
 	event.data.fd = listenfd;
 	event.events = EPOLLIN | EPOLLET;
 	http_epoll_add(epfd, listenfd, &event);
-	
+	log_info("success to add fd: %d into interest list.", listenfd);
+
 	int i, n;
 
 	printf("\ntinyhttpd started successfully!\n");
@@ -90,12 +93,13 @@ int main(int ac, char *av[]) {
 			if(errno == EINTR) {
 				continue;
 			}
-			perror("epoll wait error");
+			log_err("epoll wait error.");
 			return -1;
 		}
 
 		for(i = 0; i < n; i++) {
 			fd = evlist[i].data.fd;
+			log_info("ready fd: %d.", fd);
 			if(fd == listenfd) {
 				/*
 				 * we have a notification on the listening socket,
@@ -113,12 +117,16 @@ int main(int ac, char *av[]) {
 						}
 					}
 
+					log_info("success to accept fd: %d.", connfd);
+
 					if(make_socket_non_blocking(connfd) != 0) {
 						perror("make_socket_non_blocking");
 					}
 					event.data.fd = connfd;
 					event.events = EPOLLIN | EPOLLET;
 					http_epoll_add(epfd, connfd, &event);
+					log_info("success to add fd: %d into interest list.", connfd);
+
 				}
 
 			} else {
@@ -132,10 +140,12 @@ int main(int ac, char *av[]) {
 					*fdptr = fd;
 
 					threadpool_add_job(pool, handle, fdptr);
+					log_info("success to add a job into threadpool: fd = %d.", fd);
 					fdptr = NULL;
 
 				} else if(evlist[i].events & (EPOLLHUP | EPOLLERR)) {
 					close(fd);
+					log_info("success to close fd: %d", fd);
 				}
 			}
 		}
@@ -269,6 +279,7 @@ void not_implement(int fd) {
 	char buf[] = "tinyhttpd does not implement this method\r\n";
 	rio_writen(fd, buf, strlen(buf));
 	close(fd);
+	log_info("success to close fd: %d.", fd);
 }
 
 /*--------------------------------------------------------*
@@ -280,6 +291,7 @@ void do_404(char *uri, int fd) {
 	sprintf(buf, "<h1>The item you request:<I> %s%s </I> is not found</h1>\r\n", uri, "\0");
 	rio_writen(fd, buf, strlen(buf));
 	close(fd);
+	log_info("success to close fd: %d.", fd);
 }
 
 
@@ -321,16 +333,17 @@ void do_ls(char *dir, int fd) {
 	}
 
 	if(errno != 0) {
-		perror("readdir");
-		exit(1);
+		log_err("fail to read DIR: %s.", dir);
+		exit(EXIT_FAILURE);
 	}
 
 	if(closedir(dirp) == -1) {
-		perror("closedir");
-		exit(1);
+		log_err("fail to close DIR: %s.", dir);
+		exit(EXIT_FAILURE);
 	}
 
 	close(fd);
+	log_info("success to close fd: %d.", fd);
 	
 }
 
@@ -515,6 +528,7 @@ void serve_static(char *uri, int fd) {
 		}
 		fclose(fpfile);
 		close(fd);
+		log_info("success to close fd: %d.", fd);
 	}
 
 }
