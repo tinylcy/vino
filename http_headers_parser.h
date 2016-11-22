@@ -1,7 +1,7 @@
 /*
  * HTTP Request Headers
  */
-struct http_request_headers {
+typedef struct http_request_headers {
 	char *method;
 	char *uri;
 	char *query_args;
@@ -9,16 +9,16 @@ struct http_request_headers {
 	char *host;
 	char *user_agent;
 	char *post_data;
-};
+} http_request_headers_t;
 
-void init_headers(struct http_request_headers *);
+void init_headers(http_request_headers_t *headers);
 
-struct http_request_headers* parse_headers(int);
+http_request_headers_t* parse_headers(int fd);
 
-struct http_request_headers* parse_method_uri_version(char *, struct http_request_headers*);
+http_request_headers_t* parse_method_uri_version(char *buf, http_request_headers_t *headers);
 
-struct http_request_headers* parse_post_data(int, struct http_request_headers*);
+http_request_headers_t* parse_post_data(int fd, http_request_headers_t *headers);
 
 void read_until_crnl(int);
 
-void http_request_free(struct http_request_headers*);
+void http_request_free(http_request_headers_t *headers);

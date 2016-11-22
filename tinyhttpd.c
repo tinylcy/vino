@@ -215,7 +215,7 @@ void setup(pthread_attr_t *attrp) {
 	the execute method of threads
   -----------------------------------------------------------*/
 void* handle(void *fdptr) {
-	struct http_request_headers *headers = NULL;
+	http_request_headers_t *headers = NULL;
 
 	int fd;
 	fd = *(int*)fdptr;
@@ -231,7 +231,7 @@ void* handle(void *fdptr) {
 	handles HTTP requests, creates one thread to handle the 
 	404, ls and cat, but fork a new process to handle exec. 
   -----------------------------------------------------------*/
-void process_request(struct http_request_headers *headers, int fd) {
+void process_request(http_request_headers_t *headers, int fd) {
 
 	char uri[BUFSIZ];
 	strcpy(uri, ".");
@@ -391,7 +391,7 @@ int is_dynamic(const char *uri) {
   	executable at first, then serve the dynamic content 
   	according to the HTTP method.
   -------------------------------------------------------*/
-void serve_dynamic(struct http_request_headers *request, int fd) {
+void serve_dynamic(http_request_headers_t *request, int fd) {
 	
 	char prog[BUFSIZ];
 	strcpy(prog, ".");
@@ -419,7 +419,7 @@ void serve_dynamic(struct http_request_headers *request, int fd) {
   	fork a new process to serve the HTTP GET dynamic
   	content.
   -------------------------------------------------------*/
-void serve_get_dynamic(struct http_request_headers *request, int fd) {
+void serve_get_dynamic(http_request_headers_t *request, int fd) {
 	
 	char prog[BUFSIZ];
 	strcpy(prog, ".");
@@ -456,7 +456,7 @@ void serve_get_dynamic(struct http_request_headers *request, int fd) {
   	fork a new process to serve the HTTP POST dynamic
   	content.
   -------------------------------------------------------*/
-void serve_post_dynamic(struct http_request_headers *request, int fd) {
+void serve_post_dynamic(http_request_headers_t *request, int fd) {
 	char prog[BUFSIZ];
 	strcpy(prog, ".");
 	strcat(prog, request->uri);

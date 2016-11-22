@@ -7,16 +7,16 @@
 /*-------------------------------------------------------*
 	parse the headers of HTTP requset
   -------------------------------------------------------*/
-struct http_request_headers* parse_headers(int fd) {
+http_request_headers_t* parse_headers(int fd) {
 
-	struct http_request_headers *headers = (struct http_request_headers*)malloc(sizeof(struct http_request_headers));
+	http_request_headers_t *headers = (http_request_headers_t*)malloc(sizeof(http_request_headers_t));
 	if(headers == NULL) {
 		perror("malloc");
 		return NULL;
 	}
 
 	/* initialize the struct */
-	memset(headers, 0, sizeof(struct http_request_headers));
+	memset(headers, 0, sizeof(http_request_headers_t));
 	init_headers(headers);
 
 	char header_buf[BUFSIZ];    /* HTTP header */
@@ -41,7 +41,7 @@ struct http_request_headers* parse_headers(int fd) {
 	parse the first line of HTTP request to fetch 
 	HTTP method, HTTP uri and HTTP version.
   -------------------------------------------------------*/
-struct http_request_headers* parse_method_uri_version(char *header_buf, struct http_request_headers *headers) {
+http_request_headers_t* parse_method_uri_version(char *header_buf, http_request_headers_t *headers) {
 
 	char method[BUFSIZ], uri_args[BUFSIZ], uri[BUFSIZ], query_args[BUFSIZ], version[BUFSIZ];
 	char *pivot = NULL;    /* the location of '?' */
@@ -84,7 +84,7 @@ struct http_request_headers* parse_method_uri_version(char *header_buf, struct h
 /*-------------------------------------------------------*
 	parse the HTTP request entity to get post parameters.
   -------------------------------------------------------*/
-struct http_request_headers* parse_post_data(int fd, struct http_request_headers *request) {
+http_request_headers_t* parse_post_data(int fd, http_request_headers_t *request) {
 	
 	rio_t rio;
 	char buf[BUFSIZ];
@@ -104,7 +104,7 @@ struct http_request_headers* parse_post_data(int fd, struct http_request_headers
 /*-------------------------------------------------------*
 	initialize the HTTP headers.
   -------------------------------------------------------*/
-void init_headers(struct http_request_headers *headers) {
+void init_headers(http_request_headers_t *headers) {
 	headers->method = NULL;
 	headers->uri = NULL;
 	headers->query_args = NULL;
@@ -134,7 +134,7 @@ void read_until_crnl(int fd) {
 /*-------------------------------------------------------*
 	free the memory of parsed HTTP headers.
   -------------------------------------------------------*/
-void http_request_free(struct http_request_headers *request) {
+void http_request_free(http_request_headers_t *request) {
 	if(request->method != NULL) {
 		free(request->method);
 	}
