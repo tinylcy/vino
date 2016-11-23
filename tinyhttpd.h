@@ -17,6 +17,7 @@ int connect_to_server(char*, int);
 int make_socket_non_blocking(int);
 
 void init_conf(struct httpd_conf*);
+void do_request(void *req_ptr);
 void* handle(void*);
 void process_request(struct http_request_headers*, int);
 void header(FILE*, char*);

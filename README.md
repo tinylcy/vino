@@ -17,6 +17,7 @@ cd .. && ./build/tinyhttpd &
 
 By default the server runs on port 8008, if you want to assign other port for the server, run it as `./build/tinyhttpd port &`.
 
+In order to avoid showing too much stdout/stderr message, you can run `./build/tinyhttpd [port] 2>&1 >tinyhttpd.log &` to redirect both stdout and stderr to a log file.
 
 ## Programming model
 

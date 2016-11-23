@@ -17,6 +17,7 @@
 #include <dirent.h>
 #include "http_headers_parser.h"
 #include "tinyhttpd.h"
+#include "http_request.h"
 #include "socketlib.h"
 #include "rio.h"
 #include "util.h"
@@ -35,7 +36,7 @@ int server_requests;
 int main(int ac, char *av[]) {
 	int listenfd = -1;
 	int fd;
-	int *fdptr;
+	// int *fdptr;
 	
 	struct httpd_conf conf;
 
@@ -66,18 +67,28 @@ int main(int ac, char *av[]) {
 		exit(EXIT_FAILURE);
 	}
 
-	threadpool_t *pool = threadpool_init(conf.thread_num, conf.job_max_num);
-	if(pool == NULL) {
-		log_err("fail to initialize the threadpool.");
-		exit(EXIT_FAILURE);
-	}
+	// threadpool_t *pool = threadpool_init(conf.thread_num, conf.job_max_num);
+	// if(pool == NULL) {
+	//	log_err("fail to initialize the threadpool.");
+	//	exit(EXIT_FAILURE);
+	// }
 	
 	/*
 	 * create epoll and add listenfd to interest list
 	 */
 	int epfd = http_epoll_create(0);
+
+	http_request_t *request = NULL;
+	request = (http_request_t *)malloc(sizeof(http_request_t));
+	if(request == NULL) {
+		log_err("fail to malloc http_request_t.");
+		return -1;
+	}
+	http_request_init(request, listenfd, epfd);
+
 	struct epoll_event event;
-	event.data.fd = listenfd;
+	event.data.ptr = (void *)request;
+	// event.data.fd = listenfd;
 	event.events = EPOLLIN | EPOLLET;
 	http_epoll_add(epfd, listenfd, &event);
 	log_info("success to add fd: %d into interest list.", listenfd);
@@ -98,7 +109,8 @@ int main(int ac, char *av[]) {
 		}
 
 		for(i = 0; i < n; i++) {
-			fd = evlist[i].data.fd;
+			http_request_t *req = (http_request_t *)evlist[i].data.ptr;
+			fd = req->fd;
 			log_info("ready fd: %d.", fd);
 			if(fd == listenfd) {
 				/*
@@ -112,17 +124,21 @@ int main(int ac, char *av[]) {
 						if((errno == EAGAIN) || (errno == EWOULDBLOCK)) {
 							break;
 						} else {
-							perror("accept");
+							log_err("fail to accept a connfd.");
 							break;
 						}
 					}
 
-					log_info("success to accept fd: %d.", connfd);
+					log_info("success to accept a fd: %d.", connfd);
 
 					if(make_socket_non_blocking(connfd) != 0) {
-						perror("make_socket_non_blocking");
+						log_err("fail to make socket non-blocking: connfd = %d.", connfd);
 					}
-					event.data.fd = connfd;
+
+					http_request_t *r = (http_request_t *)malloc(sizeof(http_request_t));
+					http_request_init(r, connfd, epfd);
+					// event.data.fd = connfd;
+					event.data.ptr = (void *)r;
 					event.events = EPOLLIN | EPOLLET;
 					http_epoll_add(epfd, connfd, &event);
 					log_info("success to add fd: %d into interest list.", connfd);
@@ -130,39 +146,31 @@ int main(int ac, char *av[]) {
 				}
 
 			} else {
+
 				if(evlist[i].events & EPOLLIN) {
 					/*
 					 * in this case, we have to malloc an
 					 * extra space to store fd, CASPP page 661
 					 * explains the reason.
 					 */
-					fdptr = (int *)malloc(sizeof(int));
-					*fdptr = fd;
+					// fdptr = (int *)malloc(sizeof(int));
+					// *fdptr = fd;
 
-					threadpool_add_job(pool, handle, fdptr);
-					log_info("success to add a job into threadpool: fd = %d.", fd);
-					fdptr = NULL;
+					// threadpool_add_job(pool, handle, fdptr);
+					// log_info("success to add a job into threadpool: fd = %d.", fd);
+					// fdptr = NULL;
 
-				} else if(evlist[i].events & (EPOLLHUP | EPOLLERR)) {
+					//threadpool_add_job(pool, do_request, evlist[i].data.ptr);
+			    
+					do_request(evlist[i].data.ptr);
+
+			    } else if(evlist[i].events & (EPOLLHUP | EPOLLERR)) {
 					close(fd);
 					log_info("success to close fd: %d", fd);
 				}
 			}
 		}
 	}
-
-	//while(1) {
-	//	fd = accept(listenfd, NULL, NULL);
-	//	if(fd < 0) {
-	//		continue;
-	//	}
-	//	printf("fd: %d\n", fd);
-	//	server_requests++;
-	//	fdptr = (int*)malloc(sizeof(int));
-	//	*fdptr = fd;
-	//	
-	//	threadpool_add_job(pool, handle, fdptr);
-	//}
 
 	printf("exit tinyhttpd.");
 
@@ -225,6 +233,38 @@ void* handle(void *fdptr) {
 	process_request(headers, fd);
 
 	return NULL;
+}
+
+void do_request(void *req_ptr) {
+	http_request_t *request = (http_request_t *)req_ptr;
+	int fd = request->fd;
+	char *cursor = NULL;
+	size_t remain_size = 0;
+	int n;
+
+	while(1) {
+		cursor = &request->buf[request->last % REQ_MAX_BUF];
+		remain_size = 200;
+
+		n = read(fd, cursor, remain_size);
+
+		if(n == 0) { // EOF
+			break;
+		}
+		if(n < 0) {
+			if(errno == EAGAIN) {
+				break;
+			}
+			break;
+		}
+
+		request->last += n;
+		printf("%s", request->buf);
+		not_implement(fd);
+		break;
+	}
+
+	// close(fd);
 }
 
 /*-----------------------------------------------------------*
