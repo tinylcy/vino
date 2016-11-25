@@ -41,45 +41,47 @@ mem: 32GB.
 **Zaver**
 
 ```markdown
-Server Software:
-Server Hostname:        127.0.1.1
-Server Port:            8008
+Server Software:        Zaver
+Server Hostname:        0.0.0.0
+Server Port:            3000
 
-Document Path:          /doc/
-Document Length:        68 bytes
+Document Path:          /html/index.html
+Document Length:        170 bytes
 
 Concurrency Level:      500
-Time taken for tests:   2.604 seconds
+Time taken for tests:   10.172 seconds
 Complete requests:      10000
 Failed requests:        0
-Total transferred:      1130000 bytes
-HTML transferred:       680000 bytes
-Requests per second:    3840.26 [#/sec] (mean)
-Time per request:       130.199 [ms] (mean)
-Time per request:       0.260 [ms] (mean, across all concurrent requests)
-Transfer rate:          423.78 [Kbytes/sec] received
+Non-2xx responses:      10000
+Total transferred:      2760000 bytes
+HTML transferred:       1700000 bytes
+Requests per second:    983.10 [#/sec] (mean)
+Time per request:       508.594 [ms] (mean)
+Time per request:       1.017 [ms] (mean, across all concurrent requests)
+Transfer rate:          264.98 [Kbytes/sec] received
 
 Connection Times (ms)
               min  mean[+/-sd] median   max
-Connect:        0   45 205.3      0    1005
-Processing:     8   35  14.5     32     233
-Waiting:        8   35  14.5     32     233
-Total:         27   80 207.4     32    1229
+Connect:        0    3   7.9      0      47
+Processing:   499  502   6.2    501     547
+Waiting:        0    2   3.9      1      30
+Total:        499  505  12.6    501     564
 
 Percentage of the requests served within a certain time (ms)
-  50%     32
-  66%     33
-  75%     34
-  80%     34
-  90%     45
-  95%    108
-  98%   1040
-  99%   1045
- 100%   1229 (longest request)
+  50%    501
+  66%    502
+  75%    502
+  80%    502
+  90%    507
+  95%    547
+  98%    558
+  99%    562
+ 100%    564 (longest request)
  
 ```
 
 **tinyhttpd**
+
 ```markdown
 
 Server Software:
