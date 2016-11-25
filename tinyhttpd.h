@@ -3,6 +3,8 @@
 #define THREAD_NUM "THREAD_NUM"
 #define JOB_MAX_NUM "JOB_MAX_NUM"
 
+#include "http_request.h"
+
 /* store the configuration params */
 struct httpd_conf {
 	int port;
@@ -18,6 +20,7 @@ int make_socket_non_blocking(int);
 
 void init_conf(struct httpd_conf*);
 void do_request(void *req_ptr);
+void http_response(http_request_t *request);
 void* handle(void*);
 void process_request(struct http_request_headers*, int);
 void header(FILE*, char*);

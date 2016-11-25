@@ -77,7 +77,7 @@ int main(int ac, char *av[]) {
 	 * create epoll and add listenfd to interest list
 	 */
 	int epfd = http_epoll_create(0);
-
+	printf("epfd: %d\n", epfd);
 	http_request_t *request = NULL;
 	request = (http_request_t *)malloc(sizeof(http_request_t));
 	if(request == NULL) {
@@ -240,7 +240,7 @@ void do_request(void *req_ptr) {
 	int fd = request->fd;
 	char *cursor = NULL;
 	size_t remain_size = 0;
-	int n;
+	int n, ret;
 
 	while(1) {
 		cursor = &request->buf[request->last % REQ_MAX_BUF];
@@ -259,13 +259,43 @@ void do_request(void *req_ptr) {
 		}
 
 		request->last += n;
-		printf("%s", request->buf);
-		not_implement(fd);
-		break;
+		
+		ret = http_request_parse(request);
+		if(ret == HTTP_PARSE_AGAIN) {
+			continue;
+		}else if(ret == HTTP_PARSE_OK) {
+			http_response(request);
+			break;
+		}
+
 	}
 
 	// close(fd);
 }
+
+void http_response(http_request_t *request) {
+	char method[BUFSIZ];
+	char uri[BUFSIZ];
+
+	memset(method, 0, BUFSIZ);
+	strncpy(method, request->method_start, request->method_end - request->method_start + 1);
+	memset(uri, 0, BUFSIZ);
+	strcpy(uri, ".");
+	strncpy(uri + 1, request->uri_start, request->uri_end - request->uri_start + 1);
+	
+	if(strcmp(method, "GET") && strcmp(method, "POST")) {
+		not_implement(request->fd);
+	} else if(!file_exist(uri)) {
+		do_404(uri, request->fd);
+	} else if(is_directory(uri)) {
+		do_ls(uri, request->fd);
+	} else if(is_dynamic(uri)) {
+		// TODO
+	} else {
+		serve_static(uri, request->fd);
+	}
+}
+
 
 /*-----------------------------------------------------------*
 	handles HTTP requests, creates one thread to handle the 
