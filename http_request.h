@@ -47,6 +47,4 @@ char *http_request_get_query(http_request_t *request);
 
 char *http_request_get_version(http_request_t *request);
 
-char *contains(char *start, char *end, char target);
-
 #endif

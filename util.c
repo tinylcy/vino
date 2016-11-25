@@ -1,3 +1,4 @@
+#include <stdlib.h>
 #include <sys/stat.h>
 
 /*-------------------------------------------------------*
@@ -35,4 +36,12 @@ int file_exist(const char *filepath) {
 	return (stat(filepath, &info) == 0);
 }
 
-
+char *contains(char *start, char *end, char target) {
+	char *p = NULL;
+	for(p = start; p <= end; p++) {
+		if(*p == target) {
+			return p;
+		}
+	}
+	return NULL;
+}

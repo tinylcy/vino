@@ -3,6 +3,7 @@
 #define THREAD_NUM "THREAD_NUM"
 #define JOB_MAX_NUM "JOB_MAX_NUM"
 
+#include "http_headers_parser.h"
 #include "http_request.h"
 
 /* store the configuration params */
@@ -19,10 +20,8 @@ int connect_to_server(char*, int);
 int make_socket_non_blocking(int);
 
 void init_conf(struct httpd_conf*);
-void do_request(void *req_ptr);
+void process_request(void *req_ptr);
 void http_response(http_request_t *request);
-void* handle(void*);
-void process_request(struct http_request_headers*, int);
 void header(FILE*, char*);
 
 char *file_type(char*);
@@ -33,9 +32,9 @@ void do_ls(char*, int);
 
 void serve_static(char *, int);
 
-void serve_dynamic(struct http_request_headers*, int);
-void serve_get_dynamic(struct http_request_headers*, int);
-void serve_post_dynamic(struct http_request_headers*, int);
+void serve_dynamic(http_request_headers_t*, int);
+void serve_get_dynamic(http_request_headers_t*, int);
+void serve_post_dynamic(http_request_headers_t*, int);
 
 void sanitize(char*);
 int is_dynamic(const char*);

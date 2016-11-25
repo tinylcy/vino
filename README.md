@@ -27,14 +27,18 @@ In order to avoid showing too much stdout/stderr message, you can run `./build/t
 
 ## Performance 
 
+I have made a small performance test with [Zaver](https://github.com/zyearn/zaver), a fast and efficient HTTP server(I have learned a lot from it). In a way it was not a fair comparasion, for the number of total transferred bytes was not equal and the processing logic in tinyhttpd is relatively simple.
+
 ```markdown
-ab -n 10000 -c 500 http://127.0.1.1:8008/doc/
+ab -n 10000 -c 500 http://127.0.1.1:8008/doc/index.html
 ```
 
 ```markdown
 cpu: Intel(R) Xeon(R) CPU           L5630  @ 2.13GHz, 4 cores.
 mem: 32GB.
 ```
+
+**Zaver**
 
 ```markdown
 Server Software:
@@ -75,3 +79,43 @@ Percentage of the requests served within a certain time (ms)
  
 ```
 
+**tinyhttpd**
+```markdown
+
+Server Software:
+Server Hostname:        127.0.1.1
+Server Port:            8008
+
+Document Path:          /doc/index.html
+Document Length:        173 bytes
+
+Concurrency Level:      500
+Time taken for tests:   3.695 seconds
+Complete requests:      10000
+Failed requests:        0
+Total transferred:      2170000 bytes
+HTML transferred:       1730000 bytes
+Requests per second:    2706.40 [#/sec] (mean)
+Time per request:       184.747 [ms] (mean)
+Time per request:       0.369 [ms] (mean, across all concurrent requests)
+Transfer rate:          573.52 [Kbytes/sec] received
+
+Connection Times (ms)
+              min  mean[+/-sd] median   max
+Connect:        0   88 381.2      0    3005
+Processing:    10   55  33.2     44     456
+Waiting:       10   54  33.2     44     456
+Total:         41  143 385.8     45    3259
+
+Percentage of the requests served within a certain time (ms)
+  50%     45
+  66%     50
+  75%     55
+  80%     61
+  90%    151
+  95%   1049
+  98%   1061
+  99%   3053
+ 100%   3259 (longest request)
+
+```

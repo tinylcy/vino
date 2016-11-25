@@ -7,6 +7,7 @@
 #include <stdlib.h>
 #include <string.h>
 #include "http_request.h"
+#include "util.h"
 
 void http_request_init(http_request_t *request, int fd, int epfd) {
 	memset(request, 0, sizeof(http_request_t));
@@ -94,16 +95,6 @@ int http_request_parse(http_request_t *request) {
 
 	return HTTP_PARSE_OK;
 
-}
-
-char *contains(char *start, char *end, char target) {
-	char *p = NULL;
-	for(p = start; p <= end; p++) {
-		if(*p == target) {
-			return p;
-		}
-	}
-	return NULL;
 }
 
 char *http_request_get_method(http_request_t *request) {

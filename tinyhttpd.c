@@ -15,9 +15,7 @@
 #include <unistd.h>
 #include <errno.h>
 #include <dirent.h>
-#include "http_headers_parser.h"
 #include "tinyhttpd.h"
-#include "http_request.h"
 #include "socketlib.h"
 #include "rio.h"
 #include "util.h"
@@ -162,7 +160,7 @@ int main(int ac, char *av[]) {
 
 					//threadpool_add_job(pool, do_request, evlist[i].data.ptr);
 			    
-					do_request(evlist[i].data.ptr);
+					process_request(evlist[i].data.ptr);
 
 			    } else if(evlist[i].events & (EPOLLHUP | EPOLLERR)) {
 					close(fd);
@@ -219,23 +217,7 @@ void setup(pthread_attr_t *attrp) {
 	server_requests = 0;
 }
 
-/*-----------------------------------------------------------*
-	the execute method of threads
-  -----------------------------------------------------------*/
-void* handle(void *fdptr) {
-	http_request_headers_t *headers = NULL;
-
-	int fd;
-	fd = *(int*)fdptr;
-	free(fdptr);
-
-	headers = parse_headers(fd);    /* parse the HTTP request and store the params in headers */
-	process_request(headers, fd);
-
-	return NULL;
-}
-
-void do_request(void *req_ptr) {
+void process_request(void *req_ptr) {
 	http_request_t *request = (http_request_t *)req_ptr;
 	int fd = request->fd;
 	char *cursor = NULL;
@@ -295,34 +277,7 @@ void http_response(http_request_t *request) {
 		serve_static(uri, request->fd);
 	}
 }
-
-
-/*-----------------------------------------------------------*
-	handles HTTP requests, creates one thread to handle the 
-	404, ls and cat, but fork a new process to handle exec. 
-  -----------------------------------------------------------*/
-void process_request(http_request_headers_t *headers, int fd) {
-
-	char uri[BUFSIZ];
-	strcpy(uri, ".");
-	strcat(uri, headers->uri);    /* [uri] is the path of request resources, start with '.' */
 	
-	if(strcmp(headers->method, "GET") && strcmp(headers->method, "POST")) {
-		not_implement(fd);
-	} else if(!file_exist(uri)) {
-		do_404(uri, fd);
-	} else if(is_directory(uri)) {
-		do_ls(uri, fd);
-	} else if(is_dynamic(uri)) {
-		serve_dynamic(headers, fd);
-	} else {
-		serve_static(uri, fd);
-	}
-
-	http_request_free(headers);
-
-}
-
 /*---------------------------------------------------------*
 	return the information HTTP headers about the request.
 	Parameters: the connfd to print the headers on
