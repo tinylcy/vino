@@ -16,7 +16,7 @@ http_request_headers_t* parse_headers(int fd) {
 	}
 
 	/* initialize the struct */
-	memset(headers, 0, sizeof(http_request_headers_t));
+	// memset(headers, 0, sizeof(http_request_headers_t));
 	init_headers(headers);
 
 	char header_buf[BUFSIZ];    /* HTTP header */
