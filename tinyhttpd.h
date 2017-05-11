@@ -1,3 +1,8 @@
+/*
+ * Copyright (C) Chenyang Li
+ * Copyright (C) tinyhttpd
+ */
+
 #define DYNAMIC_PATH "cgi-bin"
 #define PORT "PORT"
 #define THREAD_NUM "THREAD_NUM"
@@ -9,7 +14,7 @@
 /* store the configuration params */
 struct httpd_conf {
 	int port;
-    int thread_num;
+	int thread_num;
 	int job_max_num;
 };
 

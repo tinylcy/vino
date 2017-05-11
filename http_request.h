@@ -31,7 +31,7 @@ typedef struct http_request_s {
 	char *query_start;
 	char *query_end;
 	char *version_start;
-	char *version_end;	
+	char *version_end;
 
 } http_request_t;
 

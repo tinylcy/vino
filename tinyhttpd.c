@@ -15,6 +15,7 @@
 #include <unistd.h>
 #include <errno.h>
 #include <dirent.h>
+#include <signal.h>
 #include "tinyhttpd.h"
 #include "socketlib.h"
 #include "rio.h"
@@ -72,7 +73,19 @@ int main(int ac, char *av[]) {
 	// }
 
 	/*
-	 * create epoll and add listenfd to interest list
+	 * install signal handler for SIGPIPE.
+	 */
+	struct sigaction sa;
+	memset(&sa, '\0', sizeof(sa));
+	sa.sa_handler = SIG_IGN;
+	sa.sa_flags = 0;
+	if (sigaction(SIGPIPE, &sa, NULL)) {
+		log_err("install signal handler for SIGPIPE failed.");
+		return -1;
+	}
+
+	/*
+	 * create epoll and add listenfd to interest list.
 	 */
 	int epfd = http_epoll_create(0);
 	printf("epfd: %d\n", epfd);
@@ -151,6 +164,7 @@ int main(int ac, char *av[]) {
 					 * extra space to store fd, CASPP page 661
 					 * explains the reason.
 					 */
+
 					// fdptr = (int *)malloc(sizeof(int));
 					// *fdptr = fd;
 
@@ -300,23 +314,25 @@ void headers(int fd, int status_code, char *short_msg, char *content_type) {
 	unimplement HTTP command.
   ---------------------------------------------------------*/
 void not_implement(int fd) {
-	headers(fd, 501, "Not Implemented", "text/html");
-	char buf[] = "tinyhttpd does not implement this method\r\n";
-	rio_writen(fd, buf, strlen(buf));
-	close(fd);
-	log_info("success to close fd: %d.", fd);
+
+	char header[BUFSIZ], body[BUFSIZ];
+
+	sprintf(body, "tinyhttpd does not implement the method");
+
+	sprintf(header, "HTTP/1.1 %s %s\r\n", "501", "Not Implemented");
+	sprintf(header, "%sServer: tinyhttpd", header);
+	sprintf(header, "%sContent-type: text/html\r\n", header);
+	sprintf(header, "%sConnection: close\r\n", header);
+	sprintf(header, "%sContent-length: %d\r\n\r\n", header, (int)strlen(body));
+
+	rio_writen(fd, header, strlen(header));
+	rio_writen(fd, body, strlen(body));
 }
 
 /*--------------------------------------------------------*
 	no such object.
   --------------------------------------------------------*/
 void do_404(char *uri, int fd) {
-	// headers(fd, 404, "Not Found", "text/html");
-	// char buf[BUFSIZ];
-	// sprintf(buf, "<h1>The item you request:<I> %s%s </I> is not found</h1>\r\n", uri, "\0");
-	// rio_writen(fd, buf, strlen(buf));
-	// close(fd);
-	// log_info("success to close fd: %d.", fd);
 
 	char header[BUFSIZ], body[BUFSIZ];
 
@@ -325,7 +341,7 @@ void do_404(char *uri, int fd) {
 	sprintf(body, "%s</body>", body);
 	sprintf(body, "%s</html>", body);
 
-	sprintf(header, "HTTP/1.1 %s %s\r\n", "404", "Not Found.");
+	sprintf(header, "HTTP/1.1 %s %s\r\n", "404", "Not Found");
 	sprintf(header, "%sServer: tinyhttpd", header);
 	sprintf(header, "%sContent-type: text/html\r\n", header);
 	sprintf(header, "%sConnection: close\r\n", header);
@@ -333,8 +349,6 @@ void do_404(char *uri, int fd) {
 
 	rio_writen(fd, header, strlen(header));
 	rio_writen(fd, body, strlen(body));
-
-	// close(fd);
 }
 
 
@@ -536,13 +550,23 @@ void serve_post_dynamic(http_request_headers_t *request, int fd) {
 	check if a file is readable at first.
   --------------------------------------------------------*/
 void serve_static(char *uri, int fd) {
+	char header[BUFSIZ];
+
 	/* the file is not readable */
 	if (!is_readable(uri)) {
-		headers(fd, 403, "Forbidden", "text/html");
-		char buf[BUFSIZ];
-		sprintf(buf, "<h1>tinyhttpd couldn't read the file: <I>%s</I>.</h1>\r\n", uri);
-		rio_writen(fd, buf, strlen(buf));
-		close(fd);
+		char body[BUFSIZ];
+		sprintf(body, "<html>");
+		sprintf(body, "%s <h1>tinyhttpd couldn't read the file: <I>%s</I>.</h1>", body, uri);
+
+		sprintf(header, "HTTP/1.1 %s %s\r\n", "403", "Forbidden");
+		sprintf(header, "%sServer: tinyhttpd", header);
+		sprintf(header, "%sContent-type: text/html\r\n", header);
+		sprintf(header, "%sConnection: close\r\n", header);
+		sprintf(header, "%sContent-length: %d\r\n\r\n", header, (int)strlen(body));
+
+		rio_writen(fd, header, strlen(header));
+		rio_writen(fd, body, strlen(body));
+
 		return;
 	}
 
@@ -565,13 +589,21 @@ void serve_static(char *uri, int fd) {
 	fpfile = fopen(uri, "r");
 
 	if (fpfile != NULL) {
-		headers(fd, 200, "OK", content_type);
+		
+		int size = file_size(uri);
+		sprintf(header, "HTTP/1.1 %s %s\r\n", "200", "OK");
+		sprintf(header, "%sServer: tinyhttpd", header);
+		sprintf(header, "%sContent-type: %s\r\n", header, content_type);
+		sprintf(header, "%sConnection: close\r\n", header);
+		sprintf(header, "%sContent-length: %d\r\n\r\n", header, size);
+
+		rio_writen(fd, header, strlen(header));
+
 		while ((c = getc(fpfile)) != EOF) {
 			rio_writen(fd, &c, 1);
 		}
+
 		fclose(fpfile);
-		close(fd);
-		log_info("success to close fd: %d.", fd);
 	}
 
 }

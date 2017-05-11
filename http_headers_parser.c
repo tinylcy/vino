@@ -10,7 +10,7 @@
 http_request_headers_t* parse_headers(int fd) {
 
 	http_request_headers_t *headers = (http_request_headers_t*)malloc(sizeof(http_request_headers_t));
-	if(headers == NULL) {
+	if (headers == NULL) {
 		perror("malloc");
 		return NULL;
 	}
@@ -20,25 +20,25 @@ http_request_headers_t* parse_headers(int fd) {
 	init_headers(headers);
 
 	char header_buf[BUFSIZ];    /* HTTP header */
-	
+
 	rio_t rio;
 	rio_readinitb(&rio, fd);
 
-	if(rio_readlineb(&rio, header_buf, BUFSIZ) != -1) {
+	if (rio_readlineb(&rio, header_buf, BUFSIZ) != -1) {
 		headers = parse_method_uri_version(header_buf, headers);
-		if(strcmp(headers->method, "POST") == 0) {
+		if (strcmp(headers->method, "POST") == 0) {
 			headers = parse_post_data(fd, headers);
 		}
 	} else {
 		perror("rio_readlineb");
 	}
-	
+
 	return headers;
 
 }
 
 /*-------------------------------------------------------*
-	parse the first line of HTTP request to fetch 
+	parse the first line of HTTP request to fetch
 	HTTP method, HTTP uri and HTTP version.
   -------------------------------------------------------*/
 http_request_headers_t* parse_method_uri_version(char *header_buf, http_request_headers_t *headers) {
@@ -48,13 +48,13 @@ http_request_headers_t* parse_method_uri_version(char *header_buf, http_request_
 	int uri_len = 0;
 
 	sscanf(header_buf, "%s %s %s\r\n", method, uri_args, version);
-	
+
 	headers->method = (char*)malloc(sizeof(char) * (strlen(method) + 1));
 	memset(headers->method, 0, strlen(method) + 1);    /* initialize the array to 0 */
 	strcpy(headers->method, method);
-	
+
 	pivot = strchr(uri_args, '?');    /* pivot point to character '?' */
-	if(pivot != NULL) {    /* without any arguments */
+	if (pivot != NULL) {   /* without any arguments */
 		uri_len = (int)(pivot - uri_args);
 	} else {
 		uri_len = strlen(uri_args);
@@ -64,8 +64,8 @@ http_request_headers_t* parse_method_uri_version(char *header_buf, http_request_
 	headers->uri = (char*)malloc(sizeof(char) * (strlen(uri) + 1));
 	memset(headers->uri, 0, strlen(uri) + 1);
 	strcpy(headers->uri, uri);
-	
-	if(pivot != NULL) {    /* without any arguments */
+
+	if (pivot != NULL) {   /* without any arguments */
 		strcpy(query_args, pivot + 1);
 		headers->query_args = (char*)malloc(sizeof(char) * (strlen(query_args) + 1));
 		memset(headers->query_args, 0, strlen(query_args) + 1);
@@ -77,7 +77,7 @@ http_request_headers_t* parse_method_uri_version(char *header_buf, http_request_
 	headers->version = (char*)malloc(sizeof(char) * (strlen(version) + 1));
 	memset(headers->version, 0, strlen(version) + 1);
 	strcpy(headers->version, version);
-	
+
 	return headers;
 }
 
@@ -85,7 +85,7 @@ http_request_headers_t* parse_method_uri_version(char *header_buf, http_request_
 	parse the HTTP request entity to get post parameters.
   -------------------------------------------------------*/
 http_request_headers_t* parse_post_data(int fd, http_request_headers_t *request) {
-	
+
 	rio_t rio;
 	char buf[BUFSIZ];
 
@@ -123,8 +123,8 @@ void read_until_crnl(int fd) {
 	rio_t rio;
 	rio_readinitb(&rio, fd);
 
-	while(rio_readlineb(&rio, buf, BUFSIZ) != -1 && strcmp(buf, "\r\n") != 0
-		&& strcmp(buf, "\n") != 0) {
+	while (rio_readlineb(&rio, buf, BUFSIZ) != -1 && strcmp(buf, "\r\n") != 0
+	        && strcmp(buf, "\n") != 0) {
 
 		;
 	}
@@ -135,28 +135,28 @@ void read_until_crnl(int fd) {
 	free the memory of parsed HTTP headers.
   -------------------------------------------------------*/
 void http_request_free(http_request_headers_t *request) {
-	if(request->method != NULL) {
+	if (request->method != NULL) {
 		free(request->method);
 	}
-	if(request->uri != NULL) {
+	if (request->uri != NULL) {
 		free(request->uri);
 	}
-	if(request->query_args != NULL) {
+	if (request->query_args != NULL) {
 		free(request->query_args);
 	}
-	if(request->version != NULL) {
+	if (request->version != NULL) {
 		free(request->version);
 	}
-	if(request->host != NULL) {
+	if (request->host != NULL) {
 		free(request->host);
 	}
-	if(request->user_agent != NULL) {
+	if (request->user_agent != NULL) {
 		free(request->user_agent);
 	}
-	if(request->post_data != NULL) {
+	if (request->post_data != NULL) {
 		free(request->post_data);
 	}
-	if(request != NULL) {
+	if (request != NULL) {
 		free(request);
 	}
 }

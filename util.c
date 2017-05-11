@@ -1,3 +1,8 @@
+/*
+ * Copyright (C) Chenyang Li
+ * Copyright (C) tinyhttpd
+ */
+
 #include <stdlib.h>
 #include <sys/stat.h>
 
@@ -6,7 +11,7 @@
   -------------------------------------------------------*/
 int is_directory(const char *filepath) {
 	struct stat info;
-	if(stat(filepath, &info) == 0 && S_ISDIR(info.st_mode)) {
+	if (stat(filepath, &info) == 0 && S_ISDIR(info.st_mode)) {
 		return 1;
 	}
 	return 0;
@@ -38,10 +43,19 @@ int file_exist(const char *filepath) {
 
 char *contains(char *start, char *end, char target) {
 	char *p = NULL;
-	for(p = start; p <= end; p++) {
-		if(*p == target) {
+	for (p = start; p <= end; p++) {
+		if (*p == target) {
 			return p;
 		}
 	}
 	return NULL;
+}
+
+/*-------------------------------------------------------*
+	get file size.
+  -------------------------------------------------------*/
+int file_size(const char *uri) {
+	struct stat buf;
+	stat(uri, &buf);
+	return (int)buf.st_size;
 }

@@ -72,7 +72,7 @@ int make_server_socket_back(int port, int backlog) {
 	// prepare the sockaddr_in structure.
 	servaddr.sin_family = AF_INET;
 	// servaddr.sin_addr.s_addr = INADDR_ANY;
-	servaddr.sin_addr.s_addr = inet_addr("222.201.145.141");
+	servaddr.sin_addr.s_addr = inet_addr("127.0.0.1");
 	servaddr.sin_port = htons(port);
 
 	// bind.

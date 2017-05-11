@@ -30,11 +30,11 @@ In order to avoid showing too much stdout/stderr message, you can run `./build/t
 I have made a small performance test with [Zaver](https://github.com/zyearn/zaver), a fast and efficient HTTP server(I have learned a lot from it). In a way it was not a fair comparasion, for the number of total transferred bytes was not equal and the processing logic in tinyhttpd is relatively simple.
 
 ```markdown
-ab -n 10000 -c 500 http://127.0.1.1:8008/doc/index.html
+ab -n 10000 -c 500 http://127.0.0.1:8008/doc/index.html
 ```
 
 ```markdown
-cpu: Intel(R) Xeon(R) CPU           L5630  @ 2.13GHz, 4 cores.
+cpu: Intel(R) Xeon(R) CPU L5630  @ 2.13GHz, 8 cores.
 mem: 32GB.
 ```
 
