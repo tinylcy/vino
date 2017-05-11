@@ -20,44 +20,6 @@ int make_server_socket(int port) {
 	return make_server_socket_back(port, BACKLOG);
 }
 
-// int make_server_socket_back(int port, int backlog) {
-// 	struct sockaddr_in servaddr;
-// 	struct hostent *hp;
-// 	char hostname[BUFSIZ];
-// 	int sock_id;
-
-// 	sock_id = socket(PF_INET, SOCK_STREAM, 0);
-// 	if (sock_id == -1) {
-// 		fprintf(stderr, "socket");
-// 		return -1;
-// 	}
-
-// 	/*
-// 	 * create address and bind it to socket.
-// 	 */
-// 	bzero((void*)&servaddr, sizeof(servaddr));
-// 	gethostname(hostname, HOSTLEN);
-// 	hp = gethostbyname(hostname);
-
-// 	bcopy((void*)hp->h_addr, (void*)&servaddr.sin_addr, hp->h_length);
-// 	servaddr.sin_port = htons(port);
-// 	servaddr.sin_family = AF_INET;
-// 	if (bind(sock_id, (struct sockaddr *)&servaddr, sizeof(servaddr)) != 0) {
-// 		fprintf(stderr, "bind");
-// 		return -1;
-// 	}
-
-// 	/*
-// 	 * start listening to the socket.
-// 	 */
-// 	if (listen(sock_id, backlog) != 0) {
-// 		fprintf(stderr, "listen");
-// 		return -1;
-// 	}
-
-// 	return sock_id;
-// }
-
 int make_server_socket_back(int port, int backlog) {
 	int sock_id;
 	struct sockaddr_in servaddr;
@@ -71,8 +33,8 @@ int make_server_socket_back(int port, int backlog) {
 
 	// prepare the sockaddr_in structure.
 	servaddr.sin_family = AF_INET;
-	// servaddr.sin_addr.s_addr = INADDR_ANY;
-	servaddr.sin_addr.s_addr = inet_addr("127.0.0.1");
+	servaddr.sin_addr.s_addr = INADDR_ANY;
+	// servaddr.sin_addr.s_addr = inet_addr("127.0.0.1");
 	servaddr.sin_port = htons(port);
 
 	// bind.

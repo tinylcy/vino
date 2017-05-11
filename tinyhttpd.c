@@ -360,15 +360,13 @@ void do_ls(char *dir, int fd) {
 
 	DIR *dirp;
 	struct dirent *dp;
-	char entry[BUFSIZ];
+	char header[BUFSIZ], body[BUFSIZ];
 
 	dirp = opendir(dir);
 	if (dirp == NULL) {
 		perror("opendir");
-		exit(1);
+		exit(EXIT_FAILURE);
 	}
-
-	headers(fd, 200, "OK", "text/plain");
 
 	/* for each entry in this directory, print filename to client */
 	for (;;) {
@@ -382,11 +380,7 @@ void do_ls(char *dir, int fd) {
 			continue;    /* skip . and .. */
 		}
 
-		memset(entry, 0, BUFSIZ);
-		strncpy(entry, dp->d_name, strlen(dp->d_name));
-		strcat(entry, "\r\n");
-
-		rio_writen(fd, entry, strlen(entry));
+		sprintf(body, "%s%s%s", body, dp->d_name, "\r\n");
 	}
 
 	if (errno != 0) {
@@ -399,7 +393,15 @@ void do_ls(char *dir, int fd) {
 		exit(EXIT_FAILURE);
 	}
 
-	close(fd);
+	sprintf(header, "HTTP/1.1 %s %s\r\n", "200", "OK");
+	sprintf(header, "%sServer: tinyhttpd", header);
+	sprintf(header, "%sContent-type: text/html\r\n", header);
+	sprintf(header, "%sConnection: close\r\n", header);
+	sprintf(header, "%sContent-length: %d\r\n\r\n", header, (int)strlen(body));
+
+	rio_writen(fd, header, strlen(header));
+	rio_writen(fd, body, strlen(body));
+
 	log_info("success to close fd: %d.", fd);
 
 }
@@ -589,7 +591,7 @@ void serve_static(char *uri, int fd) {
 	fpfile = fopen(uri, "r");
 
 	if (fpfile != NULL) {
-		
+
 		int size = file_size(uri);
 		sprintf(header, "HTTP/1.1 %s %s\r\n", "200", "OK");
 		sprintf(header, "%sServer: tinyhttpd", header);

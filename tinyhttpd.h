@@ -18,12 +18,6 @@ struct httpd_conf {
 	int job_max_num;
 };
 
-int make_server_socket_q(int, int);
-int make_server_socket(int);
-int connect_to_server(char*, int);
-
-int make_socket_non_blocking(int);
-
 void init_conf(struct httpd_conf*);
 void process_request(void *req_ptr);
 void http_response(http_request_t *request);
