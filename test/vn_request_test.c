@@ -6,9 +6,9 @@
 #include <fcntl.h>
 #include <ctype.h>
 
-#include "../vn_request.h"
-#include "../rio.h"
-#include "../error.h"
+#include "../src/vn_request.h"
+#include "../src/rio.h"
+#include "../src/error.h"
 
 #define BUFSIZE 1024
 
