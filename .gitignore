@@ -50,6 +50,7 @@ Module.symvers
 Mkfile.old
 dkms.conf
 
-tinyhttpd
+vino
 /build/*
 *.log
+.vscode/*
