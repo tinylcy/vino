@@ -7,7 +7,7 @@
 #define VN_MAX_HTTP_HEADER_NAME 50
 #define VN_MAX_HTTP_HEADER_VALUE 200
 
-/* Self-defined string structure*/
+/* Self-defined string structure */
 typedef struct vn_str_s {
     const char *p;         /* String pointer */
     size_t len;            /* String length */
