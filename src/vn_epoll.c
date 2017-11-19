@@ -7,14 +7,14 @@
 #include "vn_epoll.h"
 #include "error.h"
 
-void vn_epoll_init() {
+void vn_epoll_init(void) {
     events = (struct epoll_event *) malloc(sizeof(struct epoll_event) * VN_MAXEVENTS);
     if (NULL == events) {
         err_sys("[vn_epoll_init] malloc error");
     }
 }
 
-int vn_epoll_create() {
+int vn_epoll_create(void) {
     int epfd;
     if ((epfd = epoll_create1(VN_EPOLL_FLAGS)) == -1) {
         err_sys("[vn_epoll_create] epoll_create1 error");

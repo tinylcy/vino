@@ -2,10 +2,11 @@
  *  Copyright (C) Chenyang Li
  *  Copyright (C) vino
  */
+#include <stdio.h>
 
-#define VN_MAX_HTTP_HEADERS 20
-#define VN_MAX_HTTP_HEADER_NAME 50
-#define VN_MAX_HTTP_HEADER_VALUE 200
+#define VN_MAX_HTTP_HEADERS       20
+#define VN_MAX_HTTP_HEADER_NAME   50
+#define VN_MAX_HTTP_HEADER_VALUE  200
 
 /* Self-defined string structure */
 typedef struct vn_str_s {

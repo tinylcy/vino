@@ -11,10 +11,10 @@
 struct epoll_event *events;
 
 /* Initialize epoll event list */
-void vn_epoll_init();
+void vn_epoll_init(void);
 
 /* Open an epoll file descriptor */
-int vn_epoll_create();
+int vn_epoll_create(void);
 
 /* 
  * Register the target file descriptor `fd` on the epoll instance 

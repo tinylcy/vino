@@ -18,9 +18,9 @@ int open_clientfd(const char *hostname, const char *port) {
     struct addrinfo hints, *listp, *p;
 
     memset(&hints, 0, sizeof(struct addrinfo));
-    hints.ai_socktype = SOCK_STREAM;    /* Open a connection */
-    hints.ai_flags = AI_NUMERICSERV;    /* Using a numeric port arg */
-    hints.ai_flags |= AI_ADDRCONFIG;    /* Recommended for connections */
+    hints.ai_socktype = SOCK_STREAM;       /* Open a connection */
+    hints.ai_flags    = AI_NUMERICSERV;    /* Using a numeric port arg */
+    hints.ai_flags   |= AI_ADDRCONFIG;     /* Recommended for connections */
 
     if (getaddrinfo(hostname, port, &hints, &listp) != 0) {
         err_sys("[open_clientfd] getaddrinfo error");
@@ -49,7 +49,7 @@ int open_clientfd(const char *hostname, const char *port) {
     
     if (!p) {          /* All connects failed */
         return -1;
-    } else {          /* The last connect succeeded */
+    } else {           /* The last connect succeeded */
         return clientfd;
     }
 }
@@ -60,9 +60,9 @@ int open_listenfd(const char *port) {
 
     /* Get a list of potential server addresses */
     memset(&hints, 0, sizeof(struct addrinfo));
-    hints.ai_socktype = SOCK_STREAM;                 /* Acccept connections */
-    hints.ai_flags = AI_PASSIVE | AI_ADDRCONFIG;     /* On any IP address */
-    hints.ai_flags |= AI_NUMERICSERV;                /* Using port number */
+    hints.ai_socktype = SOCK_STREAM;                    /* Acccept connections */
+    hints.ai_flags    = AI_PASSIVE | AI_ADDRCONFIG;     /* On any IP address */
+    hints.ai_flags   |= AI_NUMERICSERV;                 /* Using port number */
 
     if (getaddrinfo(NULL, port, &hints, &listp) != 0) {
         err_sys("[open_listenfd] getaddrinfo");
@@ -77,7 +77,7 @@ int open_listenfd(const char *port) {
 
         /* Eliminates "Address already in use" error from bind */
         if (setsockopt(listenfd, SOL_SOCKET, SO_REUSEADDR,
-                (const void *)&optval, sizeof(int)) != 0) {
+                    (const void *)&optval, sizeof(int)) != 0) {
             err_sys("[open_listenfd] setsockopt");
         }
 
