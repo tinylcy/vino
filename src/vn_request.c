@@ -10,6 +10,9 @@
 #include "vn_request.h"
 #include "error.h"
 
+#define CR '\r'
+#define LF '\n'
+
 int vn_get_string(vn_str *str, char *buf, size_t buf_len) {
     const char *s;
     unsigned int i;
@@ -40,10 +43,10 @@ const char *vn_skip(const char *s, const char *end, const char *delims,
 int vn_http_get_request_len(const char *buf, size_t buf_len) {
     int i;
     for (i = 0; i < buf_len; i++) {
-        if (!isprint(buf[i]) && buf[i] != '\n') {
+        if (!isprint(buf[i]) && buf[i] != CR && buf[i] != LF) {
             return -1;
-        } else if (buf[i] == '\n' && i + 1 < buf_len && buf[i + 1] == '\n') {
-            return i + 2;                
+        } else if (buf[i] == LF && i + 2 < buf_len && buf[i + 1] == CR && buf[i + 2] == LF) {
+            return i + 3;
         }
     }
 
@@ -103,7 +106,7 @@ int vn_parse_http_headers(const char *buf, int buf_len, vn_http_request *hr) {
     }
 }
 
-void print_http_request(vn_http_request *hr) {
+void vn_print_http_request(vn_http_request *hr) {
     int i;
     char name[VN_MAX_HTTP_HEADER_NAME], value[VN_MAX_HTTP_HEADER_VALUE];
 

@@ -2,6 +2,9 @@
  *  Copyright (C) Chenyang Li
  *  Copyright (C) vino
  */
+#ifndef VINO_VN_EPOLL_H
+#define VINO_VN_EPOLL_H
+
 #include <sys/epoll.h>
 
 #define VN_EPOLL_FLAGS   0
@@ -10,10 +13,14 @@
 /* The events that will be available for caller */
 struct epoll_event *events;
 
-/* Initialize epoll event list */
+/* 
+ * Initialize epoll event list 
+ */
 void vn_epoll_init(void);
 
-/* Open an epoll file descriptor */
+/* 
+ * Open an epoll file descriptor 
+ */
 int vn_epoll_create(void);
 
 /* 
@@ -42,3 +49,5 @@ void vn_epoll_del(int epfd, int fd, struct epoll_event *event);
  * Up to `maxevents` are returned.
  */
 int vn_epoll_wait(int epfd, struct epoll_event *events, int maxevents, int timeout);
+
+#endif /* VINO_VN_EPOLL_H */

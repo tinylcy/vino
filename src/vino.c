@@ -4,6 +4,8 @@
  */
 #include <stdio.h>
 #include <stdlib.h>
+#include <unistd.h>
+#include <string.h>
 #include <sys/types.h>
 #include <sys/socket.h>
 #include <errno.h>
@@ -94,13 +96,11 @@ int main(int argc, char *argv[]) {
                     new_ep_ev.data.ptr = (void *) new_http_ev;
                     vn_epoll_add(epfd, connfd, &new_ep_ev);
                     
-                    printf("connfd = %d\n", connfd);
-
                 }
             /* End of fd == listenfd */
 
             } else {
-                vn_serve_http_event(events[i].data.ptr);
+                vn_handle_http_event(events[i].data.ptr);
             }
         }
     }
@@ -112,8 +112,87 @@ int main(int argc, char *argv[]) {
 void vn_init_http_event(vn_http_event *event, int fd, int epfd) {
     event->fd = fd;
     event->epfd = epfd;
+    memset(event->buf, '\0', VN_BUFSIZE);
+    event->bufptr = event->buf;
+    event->remain_size = VN_BUFSIZE;
 }
 
-void vn_serve_http_event(vn_http_event *http_event) {
-    printf("fd = %d\n", http_event->fd);
+void vn_handle_http_event(vn_http_event *event) {
+    int nread, buf_len;
+    int rv;
+    rio_t rio;
+    vn_http_request *hr;
+
+    rio_readinitb(&rio, event->fd);
+
+    while ((nread = rio_readn(event->fd, event->bufptr, event->remain_size)) > 0) {
+        event->bufptr += nread;
+        event->remain_size -= nread;
+    }
+
+    if (nread < 0) {
+        if (errno != EAGAIN) {
+             err_sys("[vn_server_http_event] rio_readn error");
+        } 
+    }
+
+    /*
+     * If a HTTP request message has not been completely, do nothing.
+     * Otherwise, parse it.
+     */
+    if ((buf_len = vn_http_get_request_len(event->buf, VN_BUFSIZE)) < 0) {
+        err_sys("[vn_serve_http_event] vn_http_get_request_len error");
+    } else if (buf_len > 0) {
+        if (vn_parse_http_request(event->buf, buf_len, &event->hr) < 0) {
+            err_sys("[vn_serve_http_event] vn_parse_http_request error");
+        }
+    } else {
+        printf("Haven't buffer completely\n"); 
+    }
+
+    hr = &event->hr;
+
+    vn_print_http_request(&event->hr);
+
+    if (!vn_str_cmp(&hr->method, "GET")) {
+        vn_handle_get_event(event);
+    } else if (!vn_str_cmp(&hr->method, "POST")) {
+
+    }
+
+}
+
+void vn_handle_get_event(vn_http_event *event) {
+    printf("In handle_get_event....\n");
+}
+
+void vn_send_resp_headers(vn_http_event *event, int code, unsigned long content_length) {
+
+}
+
+void vn_send_resp_error(vn_http_event *event, int code, const char *reason) {
+
+}
+
+const char *vn_status_message(int code) {
+    const char *msg = NULL;
+    switch (code) {
+        case 200:
+            msg = "OK";                    break;
+        case 400:
+            msg = "Bad Request";           break;
+        case 401:
+            msg = "Unauthorized";          break;
+        case 403:
+            msg = "Forbidden";             break;
+        case 404:
+            msg = "Not Found";             break;
+        case 500:
+            msg = "Internal Server Error"; break;
+        case 503:
+            msg = "Service Unavailable";   break;
+        default:
+            msg = "OK";
+    }
+    return msg;
 }

@@ -2,17 +2,16 @@
  *  Copyright (C) Chenyang Li
  *  Copyright (C) vino
  */
+#ifndef VINO_VN_REQUEST_H
+#define VINO_VN_REQUEST_H
+
 #include <stdio.h>
+
+#include "util.h"
 
 #define VN_MAX_HTTP_HEADERS       20
 #define VN_MAX_HTTP_HEADER_NAME   50
 #define VN_MAX_HTTP_HEADER_VALUE  200
-
-/* Self-defined string structure */
-typedef struct vn_str_s {
-    const char *p;         /* String pointer */
-    size_t len;            /* String length */
-} vn_str;
 
 /* HTTP request message */
 typedef struct vn_http_request_s {
@@ -89,4 +88,6 @@ vn_str *vn_get_http_header(vn_http_request *hr, const char *name);
 /*
  * Print http request message.
  */
-void print_http_request(vn_http_request *hr);
+void vn_print_http_request(vn_http_request *hr);
+
+#endif /* VINO_VN_REQUEST_H */
