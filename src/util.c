@@ -1,10 +1,11 @@
 /*
  *  Copyright (C) Chenyang Li
- *  Copyright (C) vino
+ *  Copyright (C) Vino
  */
 #include <unistd.h>
 #include <fcntl.h>
 #include <string.h>
+#include <signal.h>
 #include <sys/types.h>
 #include <sys/stat.h>
 
@@ -95,4 +96,14 @@ unsigned int vn_get_filesize(const char *filepath) {
         err_sys("[vn_get_filesize] stat error");
     }
     return sb.st_size;
+}
+
+void vn_signal(int signum, void (*handler)(int)) {
+    struct sigaction sa;
+    memset(&sa, '\0', sizeof(struct sigaction));
+    sa.sa_handler = handler;
+    sa.sa_flags = 0;
+    if (sigaction(signum, &sa, NULL) < 0) {
+        err_sys("[vn_signal] sigaction error");
+    }
 }

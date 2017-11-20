@@ -1,12 +1,13 @@
 /*
  *  Copyright (C) Chenyang Li
- *  Copyright (C) vino
+ *  Copyright (C) Vino
  */
 #include <stdio.h>
 #include <stdlib.h>
 #include <unistd.h>
 #include <string.h>
 #include <fcntl.h>
+#include <signal.h>
 #include <sys/types.h>
 #include <sys/socket.h>
 #include <sys/mman.h>
@@ -32,6 +33,14 @@ int main(int argc, char *argv[]) {
     struct sockaddr_storage clientaddr; 
     struct epoll_event ep_event;
     vn_http_event *http_event;
+
+    /* 
+     * Install signal handler for SIGPIPE.
+     * When a HTTP response contains header `Connection: close`,
+     * the browser will close the socket after receive data, which
+     * will create a SIGPIPE signal to the process.
+     */
+    vn_signal(SIGPIPE, SIG_IGN);
 
     if ((listenfd = open_listenfd(PORT)) < 0) {
         err_sys("[main] open_listenfd error");
@@ -198,7 +207,7 @@ void vn_handle_get_event(vn_http_event *event) {
     unsigned int filesize;
     char filetype[VN_FILETYPE_SIZE];
     
-    // TODO: nwrite = rio_writen(fd, buf, size); Check if nwrite == size.
+    // TODO: nwrite = rio_writen(fd, buf, size); Check if `nwrite` == `size`.
     if (vn_check_file_exist(filepath) < 0) {
         vn_build_resp_error_body(body);
         vn_build_resp_headers(headers, 404, "Not Found", "text/html", strlen(body));
@@ -236,7 +245,7 @@ void vn_build_resp_headers(char *headers, int code, const char *reason, const ch
     sprintf(headers, "HTTP/1.1 %d %s\r\n", code, reason);
     sprintf(headers, "%sServer: Vino\r\n", headers);
     sprintf(headers, "%sContent-type: %s\r\n", headers, content_type);
-    // sprintf(headers, "%sConnection: close\r\n", headers);
+    sprintf(headers, "%sConnection: close\r\n", headers);
     sprintf(headers, "%sContent-length: %d\r\n", headers, (int)content_length);
     sprintf(headers, "%s\r\n", headers);
 }

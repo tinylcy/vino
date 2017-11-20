@@ -1,6 +1,6 @@
 /*
  *  Copyright (C) Chenyang Li
- *  Copyright (C) vino
+ *  Copyright (C) Vino
  */
 #ifndef VINO_RIO_H
 #define VINO_RIO_H

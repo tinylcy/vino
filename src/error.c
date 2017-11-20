@@ -1,6 +1,6 @@
 /*
  *  Copyright (C) Chenyang Li
- *  Copyright (C) vino
+ *  Copyright (C) Vino
  */
 #include <stdio.h>
 #include <stdlib.h>

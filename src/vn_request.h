@@ -1,12 +1,11 @@
 /*
  *  Copyright (C) Chenyang Li
- *  Copyright (C) vino
+ *  Copyright (C) Vino
  */
 #ifndef VINO_VN_REQUEST_H
 #define VINO_VN_REQUEST_H
 
 #include <stdio.h>
-
 #include "util.h"
 
 #define VN_MAX_HTTP_HEADERS       20
@@ -83,7 +82,7 @@ int vn_parse_http_headers(const char *buf, int buf_len, vn_http_request *hr);
 vn_str *vn_get_http_header(vn_http_request *hr, const char *name);
 
 /*
- * Print http request message.
+ * Print HTTP request message.
  */
 void vn_print_http_request(vn_http_request *hr);
 

@@ -1,6 +1,6 @@
 /*
  *  Copyright (C) Chenyang Li
- *  Copyright (C) vino
+ *  Copyright (C) Vino
  */
 #ifndef VINO_UTIL_H
 #define VINO_UTIL_H
@@ -24,7 +24,6 @@ int vn_get_string(vn_str *str, char *buf, size_t buf_len);
  */
 int make_socket_non_blocking(int sockfd);
 
-
 /*
  * Compare a self-defined string with a regular string.
  */
@@ -45,5 +44,11 @@ void vn_get_filetype(const char *filepath, char *filetype);
  * Return the size of the file.
  */
 unsigned int vn_get_filesize(const char *filepath);
+
+/*
+ * Set the disposition of the signal `signum` to `handler`.
+ * This method is only suitable for handler SIG_IGN & SIG_DFL.
+ */
+void vn_signal(int signum, void (*handler)(int));
 
 #endif
