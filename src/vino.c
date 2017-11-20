@@ -194,9 +194,11 @@ void vn_handle_get_event(vn_http_event *event) {
     /* Check if a file exist */
     char headers[VN_HEADERS_SIZE], body[VN_BODY_SIZE];
     int srcfd;
+    void *srcp;
     unsigned int filesize;
     char filetype[VN_FILETYPE_SIZE];
-    void *srcp;
+    
+    // TODO: nwrite = rio_writen(fd, buf, size); Check if nwrite == size.
     if (vn_check_file_exist(filepath) < 0) {
         vn_build_resp_error_body(body);
         vn_build_resp_headers(headers, 404, "Not Found", "text/html", strlen(body));
@@ -208,16 +210,20 @@ void vn_handle_get_event(vn_http_event *event) {
             err_sys("[vn_handle_get_event] open error");
         }
         filesize = vn_get_filesize(filepath);
+        /* Map the target file into memory */
         if ((srcp = mmap(NULL, filesize, PROT_READ, MAP_PRIVATE, srcfd, 0)) == MAP_FAILED) {
             err_sys("[vn_handle_get_event] mmap error");
         }
         if (close(srcfd) < 0) {
-            err_sys("vn_handle_get_event] close srcfd error");
+            err_sys("[vn_handle_get_event] close srcfd error");
         }
         vn_get_filetype(filepath, filetype);
         vn_build_resp_headers(headers, 200, "OK", filetype, filesize);
         rio_writen(event->fd, headers, strlen(headers));
         rio_writen(event->fd, srcp, filesize);
+        if (munmap(srcp, filesize) < 0) {
+            err_sys("[vn_handle_get_event] munmap error");
+        }
     }
 
 }
