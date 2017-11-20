@@ -25,21 +25,13 @@ typedef struct vn_http_request_s {
      *     GET /vino/index.html?param1=value1&param2=value2
      *         |      uri     |       query-string       |
      */
-    vn_str query_string;
+    vn_str         query_string;
 
     /* Headers */
     unsigned short header_cnt;
-    vn_str header_names[VN_MAX_HTTP_HEADERS];
-    vn_str header_values[VN_MAX_HTTP_HEADERS];
+    vn_str         header_names[VN_MAX_HTTP_HEADERS];
+    vn_str         header_values[VN_MAX_HTTP_HEADERS];
 } vn_http_request;
-
-/*
- * Fetch specified-length string from `str` into `buf`. 
- * 
- *  0 - Fetch success
- * <0 - Fetch failed 
- */
-int vn_get_string(vn_str *str, char *buf, size_t buf_len);
 
 /*
  * Fetch substring from `s` to `end` into `vs`.
@@ -50,6 +42,11 @@ int vn_get_string(vn_str *str, char *buf, size_t buf_len);
  */
 const char *vn_skip(const char *s, const char *end,
                         const char *delims, vn_str *vs);
+
+/*
+ * Initialize HTTP request message.
+ */
+void vn_init_http_request(vn_http_request *hr);
 
 /*
  * Check whether full request is buffered.

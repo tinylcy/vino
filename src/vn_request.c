@@ -13,24 +13,6 @@
 #define CR '\r'
 #define LF '\n'
 
-int vn_get_string(vn_str *str, char *buf, size_t buf_len) {
-    const char *s;
-    unsigned int i;
-
-    if (str->len + 1 > buf_len) {
-        return -1;
-    }
-
-    s = str->p;
-    i = 0;
-    while (i < str->len) {
-        buf[i] = s[i];
-        i++;
-    }
-    buf[i] = '\0';
-    return 0;
-}
-
 const char *vn_skip(const char *s, const char *end, const char *delims,
                          vn_str *vs) {
     vs->p = s;
@@ -40,8 +22,19 @@ const char *vn_skip(const char *s, const char *end, const char *delims,
     return s;                    
 }
 
+void vn_init_http_request(vn_http_request *hr) {
+    hr->method.p = hr->uri.p = hr->proto.p = NULL;
+    hr->method.len = hr->uri.len = hr->proto.len = 0;
+    hr->query_string.p = NULL;
+    hr->query_string.len = 0;
+    hr->header_cnt = 0;
+}
+
 int vn_http_get_request_len(const char *buf, size_t buf_len) {
     int i;
+    if (buf == NULL || strlen(buf) == 0 || buf_len == 0) {
+        return 0;
+    }
     for (i = 0; i < buf_len; i++) {
         if (!isprint(buf[i]) && buf[i] != CR && buf[i] != LF) {
             return -1;
@@ -56,6 +49,7 @@ int vn_http_get_request_len(const char *buf, size_t buf_len) {
 int vn_parse_http_request(const char *buf, int buf_len, vn_http_request *hr) {
     int len, rv;
     const char *s = buf, *end = buf + buf_len;
+    const char *qs;  /* Point to the start of query string  */
     
     len = vn_http_get_request_len(buf, buf_len);
     if (len == 0) {               /* HTTP request message is buffered incompletely */
@@ -67,6 +61,13 @@ int vn_parse_http_request(const char *buf, int buf_len, vn_http_request *hr) {
     s = vn_skip(s, end, " ", &hr->method);
     s = vn_skip(s, end, " ", &hr->uri);
     s = vn_skip(s, end, "\r\n", &hr->proto);
+
+    /* Check if uri contains qurey parameters */
+    if ((qs = memchr(hr->uri.p, '?', hr->uri.len)) != NULL) {
+        hr->query_string.p = qs + 1;
+        hr->query_string.len = hr->uri.len - (qs - hr->uri.p) - 1;
+        hr->uri.len = qs - hr->uri.p;
+    }
 
     rv = vn_parse_http_headers(s, end - s, hr);
     if (rv < 0) {
@@ -113,7 +114,7 @@ void vn_print_http_request(vn_http_request *hr) {
     if (vn_get_string(&hr->method, value, VN_MAX_HTTP_HEADER_VALUE) < 0) {
         err_sys("[print_http_request] vn_get_string [method] error");
     }
-    printf("Method: %s\n", value);
+    printf("\nMethod: %s\n", value);
 
     if (vn_get_string(&hr->uri, value, VN_MAX_HTTP_HEADER_VALUE) < 0) {
         err_sys("[print_http_request] vn_get_string [uri] error");
@@ -124,6 +125,11 @@ void vn_print_http_request(vn_http_request *hr) {
         err_sys("[print_http_request] vn_get_string [proto] error");
     }
     printf("Proto: %s\n", value);
+
+    if (vn_get_string(&hr->query_string, value, VN_MAX_HTTP_HEADER_VALUE) < 0) {
+        err_sys("[print_http_request] vn_get_string [query_string] error");
+    }
+    printf("Query-String: %s\n", value);
 
     for (i = 0; i < hr->header_cnt; i++) {
         if (vn_get_string(&hr->header_names[i], name, VN_MAX_HTTP_HEADER_NAME) < 0 ||

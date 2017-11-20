@@ -6,13 +6,17 @@
 #include <stdlib.h>
 #include <unistd.h>
 #include <string.h>
+#include <fcntl.h>
 #include <sys/types.h>
 #include <sys/socket.h>
+#include <sys/mman.h>
+#include <sys/stat.h>
 #include <errno.h>
 
 #include "vino.h"
 #include "rio.h"
 #include "socketlib.h"
+#include "vn_request.h"
 #include "vn_epoll.h"
 #include "util.h"
 #include "error.h"
@@ -115,6 +119,7 @@ void vn_init_http_event(vn_http_event *event, int fd, int epfd) {
     memset(event->buf, '\0', VN_BUFSIZE);
     event->bufptr = event->buf;
     event->remain_size = VN_BUFSIZE;
+    vn_init_http_request(&event->hr);
 }
 
 void vn_handle_http_event(vn_http_event *event) {
@@ -132,7 +137,7 @@ void vn_handle_http_event(vn_http_event *event) {
 
     if (nread < 0) {
         if (errno != EAGAIN) {
-             err_sys("[vn_server_http_event] rio_readn error");
+            err_sys("[vn_handle_http_event] rio_readn error");
         } 
     }
 
@@ -147,7 +152,8 @@ void vn_handle_http_event(vn_http_event *event) {
             err_sys("[vn_serve_http_event] vn_parse_http_request error");
         }
     } else {
-        printf("Haven't buffer completely\n"); 
+        printf("Haven't buffer completely\n");
+        return; 
     }
 
     hr = &event->hr;
@@ -163,15 +169,77 @@ void vn_handle_http_event(vn_http_event *event) {
 }
 
 void vn_handle_get_event(vn_http_event *event) {
-    printf("In handle_get_event....\n");
+    vn_http_request *hr;
+    char uri[VN_MAX_HTTP_HEADER_VALUE], filepath[VN_MAX_HTTP_HEADER_VALUE];
+
+    hr = &event->hr;
+    if (vn_get_string(&hr->uri, uri, VN_MAX_HTTP_HEADER_VALUE) == -1) {
+        err_sys("[vn_handle_get_event] vn_get_string error");
+    }
+
+    /* Append default static resource path before HTTP request's uri */
+    memset(filepath, '\0', VN_MAX_HTTP_HEADER_VALUE);
+    if (strcat(filepath, VN_PARENT_DIR) == NULL) {
+        err_sys("[vn_handle_get_event] strcat [VN_PARENT_DIR] error");
+    }
+    if (strcat(filepath, VN_DEFAULT_STATIC_RES_DIR) == NULL) {
+        err_sys("[vn_handle_get_event] strcat [DEFAULT_STATIC_RES_DIR] error");
+    }
+    if (strncat(filepath, uri, strlen(uri)) == NULL) {
+        err_sys("[vn_handle_get_event] strcat [uri] error");
+    }
+
+    printf("filepath = %s\n", filepath);
+
+    /* Check if a file exist */
+    char headers[VN_HEADERS_SIZE], body[VN_BODY_SIZE];
+    int srcfd;
+    unsigned int filesize;
+    char filetype[VN_FILETYPE_SIZE];
+    void *srcp;
+    if (vn_check_file_exist(filepath) < 0) {
+        vn_build_resp_error_body(body);
+        vn_build_resp_headers(headers, 404, "Not Found", "text/html", strlen(body));
+        rio_writen(event->fd, (void *) headers, strlen(headers));
+        rio_writen(event->fd, (void *) body, strlen(body));
+    } else {
+        // TODO: Check permission
+        if ((srcfd = open(filepath, O_RDONLY, 0)) < 0) {
+            err_sys("[vn_handle_get_event] open error");
+        }
+        filesize = vn_get_filesize(filepath);
+        if ((srcp = mmap(NULL, filesize, PROT_READ, MAP_PRIVATE, srcfd, 0)) == MAP_FAILED) {
+            err_sys("[vn_handle_get_event] mmap error");
+        }
+        if (close(srcfd) < 0) {
+            err_sys("vn_handle_get_event] close srcfd error");
+        }
+        vn_get_filetype(filepath, filetype);
+        vn_build_resp_headers(headers, 200, "OK", filetype, filesize);
+        rio_writen(event->fd, headers, strlen(headers));
+        rio_writen(event->fd, srcp, filesize);
+    }
+
 }
 
-void vn_send_resp_headers(vn_http_event *event, int code, unsigned long content_length) {
-
+void vn_build_resp_headers(char *headers, int code, const char *reason, const char *content_type, 
+                            unsigned int content_length) {
+    if (NULL == reason) {
+        reason = vn_status_message(code);
+    }
+    sprintf(headers, "HTTP/1.1 %d %s\r\n", code, reason);
+    sprintf(headers, "%sServer: Vino\r\n", headers);
+    sprintf(headers, "%sContent-type: %s\r\n", headers, content_type);
+    // sprintf(headers, "%sConnection: close\r\n", headers);
+    sprintf(headers, "%sContent-length: %d\r\n", headers, (int)content_length);
+    sprintf(headers, "%s\r\n", headers);
 }
 
-void vn_send_resp_error(vn_http_event *event, int code, const char *reason) {
-
+void vn_build_resp_error_body(char *body) {
+    sprintf(body, "<html><title>Vino Error</title>");
+    sprintf(body, "%s<body bgcolor=\"ffffff\">\n", body);
+    sprintf(body, "%sVino Error.", body);
+    sprintf(body, "%s</body></html>", body);
 }
 
 const char *vn_status_message(int code) {
