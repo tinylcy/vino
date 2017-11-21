@@ -8,10 +8,8 @@
 #include <ctype.h>
 
 #include "vn_request.h"
+#include "util.h"
 #include "error.h"
-
-#define CR '\r'
-#define LF '\n'
 
 const char *vn_skip(const char *s, const char *end, const char *delims,
                          vn_str *vs) {

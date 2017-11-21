@@ -198,8 +198,6 @@ void vn_handle_get_event(vn_http_event *event) {
         err_sys("[vn_handle_get_event] strcat [uri] error");
     }
 
-    printf("filepath = %s\n", filepath);
-
     /* Check if a file exist */
     char headers[VN_HEADERS_SIZE], body[VN_BODY_SIZE];
     int srcfd;

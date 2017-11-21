@@ -2,10 +2,10 @@
  *  Copyright (C) Chenyang Li
  *  Copyright (C) Vino
  */
-#include <stdio.h>
-
 #ifndef VINO_VN_LINKEDLIST_H
 #define VINO_VN_LINKEDLIST_H
+
+#include <stdio.h>
 
 /*
  * LinkedList node structure.  
