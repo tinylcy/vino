@@ -8,6 +8,7 @@
 #include <string.h>
 #include <fcntl.h>
 #include <signal.h>
+#include <getopt.h>
 #include <sys/types.h>
 #include <sys/socket.h>
 #include <sys/mman.h>
@@ -22,9 +23,50 @@
 #include "util.h"
 #include "error.h"
 
-#define PORT        "8080"
-#define VN_RUNNING  1
-#define VN_ACCEPT   1
+#define VINO_VERSION "1.0"
+#define PORT         "8080"
+#define VN_RUNNING   1
+#define VN_ACCEPT    1
+
+static char *port;
+
+static const struct option long_options[] = {
+    {"port", required_argument, NULL, 'p'},
+    {"help", no_argument, NULL, '?'},
+    {"version", no_argument, NULL, 'V'},
+    {NULL, 0, NULL, 0}
+};
+
+static void vn_usage(char *program) {
+    fprintf(stderr,
+            "%s [option]...\n"
+            " -p|--port <port>       Specify port for vino. Default 8080.\n"
+            " -?|-h|--help           This information\n"
+            " -V|--version           Display program version\n",
+            program
+    );
+}
+
+static void vn_parse_options(int argc, char *argv[]) {
+    int opt = 0;
+    int options_index = 0;
+
+    if (1 == argc) {
+        vn_usage(argv[0]);
+        return;
+    }
+
+    while ((opt = getopt_long(argc, argv, "Vp:?h", long_options, &options_index)) != EOF) {
+        switch (opt) {
+            printf("opt = %d\n", opt);
+            case 0  : break;
+            case 'p': port = optarg; break;
+            case 'h':
+            case '?': vn_usage(argv[0]); exit(0);
+            case 'V': printf(VINO_VERSION"\n"); exit(0);
+        }
+    }
+}
 
 int main(int argc, char *argv[]) {
     int rv, epfd, listenfd;
@@ -33,6 +75,8 @@ int main(int argc, char *argv[]) {
     struct sockaddr_storage clientaddr; 
     struct epoll_event ep_event;
     vn_http_event *http_event;
+
+    vn_parse_options(argc, argv);
 
     /* 
      * Install signal handler for SIGPIPE.

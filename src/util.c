@@ -8,6 +8,7 @@
 #include <string.h>
 #include <signal.h>
 #include <ctype.h>
+#include <stdarg.h>
 #include <sys/types.h>
 #include <sys/stat.h>
 
@@ -54,6 +55,18 @@ int vn_str_cmp(const vn_str *str1, const char *str2) {
         return (p1[i] < p2[i] ? -1 : 1); 
     }
    
+}
+
+void vn_check_null(int num, ...) {
+    int i;
+    va_list ap;
+    va_start(ap, num);
+    for (i = 0; i < num; i++) {
+        if (va_arg(ap, void *) == NULL) {
+            err_sys("[vn_check_null] NULL pointer error");
+        }
+    }
+    va_end(ap);
 }
 
 int make_socket_non_blocking(int sockfd) {
@@ -131,10 +144,12 @@ void vn_parse_config(const char *conf_file, vn_conf *conf) {
         key_start = line;
         while (NULL != key_start && isspace(*key_start)) { key_start++; }
         key_end = strchr(key_start, '=');
+        vn_check_null(2, key_start, key_end);
         value_start = key_end;
         while (NULL != value_start && (isspace(*value_start) || *value_start == '=')) { value_start++; }
         value_end = value_start;
         while (NULL != value_end && !isspace(*value_end) && *value_end != CR && *value_end != LF) { value_end++; }
+        vn_check_null(4, key_start, key_end, value_start, value_end);
 
         if (!strncasecmp(key_start, "port", key_end - key_start)) {
             strncpy(conf->port, value_start, value_end - value_start);

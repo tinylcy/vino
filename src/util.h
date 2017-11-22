@@ -11,9 +11,8 @@
 
 #define VN_PORTBUF 6
 #define VN_IPBUF   15
-
-#define CR '\r'
-#define LF '\n'
+#define CR  '\r'
+#define LF  '\n'
 
 
 /* Self-defined string structure */
@@ -35,6 +34,12 @@ typedef struct vn_conf_s {
  * <0 - Fetch failed 
  */
 int vn_get_string(vn_str *str, char *buf, size_t buf_len);
+
+/*
+ * Check NULL pointer parameters. 
+ * `num` is the number of parapeters.
+ */
+void vn_check_null(int num, ...);
 
 /*
  * Compare a self-defined string with a regular string.
