@@ -22,7 +22,7 @@ typedef struct vn_http_request_s {
     /*
      * Query string(part of URI), for example:
      *     GET /vino/index.html?param1=value1&param2=value2
-     *         |      uri     |       query-string       |
+     *         |      uri      |       query-string       |
      */
     vn_str         query_string;
 

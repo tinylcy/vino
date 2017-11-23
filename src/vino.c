@@ -41,8 +41,8 @@ static void vn_usage(char *program) {
     fprintf(stderr,
             "%s [option]...\n"
             " -p|--port <port>       Specify port for vino. Default 8080.\n"
-            " -?|-h|--help           This information\n"
-            " -V|--version           Display program version\n",
+            " -?|-h|--help           This information.\n"
+            " -V|--version           Display program version.\n",
             program
     );
 }
@@ -58,8 +58,7 @@ static void vn_parse_options(int argc, char *argv[]) {
 
     while ((opt = getopt_long(argc, argv, "Vp:?h", long_options, &options_index)) != EOF) {
         switch (opt) {
-            printf("opt = %d\n", opt);
-            case 0  : break;
+            case  0 : break;
             case 'p': port = optarg; break;
             case 'h':
             case '?': vn_usage(argv[0]); exit(0);
@@ -195,7 +194,7 @@ void vn_handle_http_event(vn_http_event *event) {
     }
 
     /*
-     * If a HTTP request message has not been completely, do nothing.
+     * If a HTTP request message has not been buffered completely, do nothing.
      * Otherwise, parse it.
      */
     if ((buf_len = vn_http_get_request_len(event->buf, VN_BUFSIZE)) < 0) {
