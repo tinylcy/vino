@@ -4,26 +4,27 @@
 #include "../src/error.h"
 
 int main(void) {
-    vn_pq_init();
-    vn_pq_node node1 = { 3, NULL };
-    vn_pq_node node2 = { 2, NULL };
-    vn_pq_node node3 = { 5, NULL };
-    vn_pq_node node4 = { 8, NULL };
-    vn_pq_node node5 = { 1, NULL };
-    vn_pq_node node6 = { 4, NULL };
-    vn_pq_node node7 = { 2, NULL };
+    vn_priority_queue pq;
+    vn_pq_init(&pq);
+    vn_priority_queue_node node1 = { 3, NULL };
+    vn_priority_queue_node node2 = { 2, NULL };
+    vn_priority_queue_node node3 = { 5, NULL };
+    vn_priority_queue_node node4 = { 8, NULL };
+    vn_priority_queue_node node5 = { 1, NULL };
+    vn_priority_queue_node node6 = { 4, NULL };
+    vn_priority_queue_node node7 = { 2, NULL };
 
-    vn_pq_insert(node1);
-    vn_pq_insert(node2);
-    vn_pq_insert(node3);
-    vn_pq_insert(node4);
-    vn_pq_insert(node5);
-    vn_pq_insert(node6);
-    vn_pq_insert(node7);
+    vn_pq_insert(&pq, node1);
+    vn_pq_insert(&pq, node2);
+    vn_pq_insert(&pq, node3);
+    vn_pq_insert(&pq, node4);
+    vn_pq_insert(&pq, node5);
+    vn_pq_insert(&pq, node6);
+    vn_pq_insert(&pq, node7);
 
     int i;
     for (i = 0; i < 7; i++) {
-        vn_pq_node node = vn_pq_delete_min();
+        vn_priority_queue_node node = vn_pq_delete_min(&pq);
         printf("key = %ld\n", node.key);
     }
    
