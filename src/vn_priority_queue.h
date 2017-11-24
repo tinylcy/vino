@@ -25,7 +25,7 @@ typedef struct vn_priority_queue_node_s {
  * conversely, the two children of the node in the position k
  * are in positions 2k and 2k + 1.
  * 
- * TODO: Dynamic enlarge `nodes` space.
+ * TODO: Dynamic enlarge `nodes` memory space.
  */
 typedef struct vn_priority_queue_s {
     vn_priority_queue_node *nodes;    /* All nodes are stored in an array */
@@ -43,7 +43,12 @@ void vn_pq_init(vn_priority_queue *pq);
 void vn_pq_insert(vn_priority_queue *pq, vn_priority_queue_node node);
 
 /*
- * Return and remove the smallest node;
+ * Return the smallest node.
+ */ 
+vn_priority_queue_node vn_pq_min(vn_priority_queue *pq);
+
+/*
+ * Return and remove the smallest node.
  */
 vn_priority_queue_node vn_pq_delete_min(vn_priority_queue *pq);
 

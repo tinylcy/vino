@@ -14,16 +14,22 @@
 #define VN_PARENT_DIR                "../"
 #define VN_DEFAULT_STATIC_RES_DIR    "html"
 
+typedef void (*timeout_handler)(void *);
+
 /* HTTP request event */
 typedef struct vn_http_event_s {
-    int             fd;
-    int             epfd;
-    char            buf[VN_BUFSIZE];
-    char            *bufptr;
-    size_t          remain_size;
-    vn_http_request hr;
+    int               fd;
+    int               epfd;
+    char              buf[VN_BUFSIZE];
+    char              *bufptr;
+    size_t            remain_size;
+    vn_http_request   hr;
+    timeout_handler   handler;
 } vn_http_event;
 
+/*
+ * Initialize HTTP request event.
+ */ 
 void vn_init_http_event(vn_http_event *event, int fd, int epfd);
 
 /*
@@ -36,6 +42,8 @@ void vn_handle_http_event(vn_http_event *event);
  * Handle HTTP GET request.
  */
 void vn_handle_get_event(vn_http_event *event);
+
+void vn_close_http_event(void *event);
 
 /* 
  * Create HTTP response header and store it into headers.

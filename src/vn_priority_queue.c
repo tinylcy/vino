@@ -56,14 +56,19 @@ void vn_pq_insert(vn_priority_queue *pq, vn_priority_queue_node node) {
     vn_swim(pq, pq->size);
 }
 
-vn_priority_queue_node vn_pq_delete_min(vn_priority_queue *pq) {
+vn_priority_queue_node vn_pq_min(vn_priority_queue *pq) {
     if (!pq || !pq->nodes) {
         err_sys("[vn_pq_insert] the priority queue has not been initialized");
     }
     if (vn_pq_isempty(pq)) {
-        err_sys("[vn_pq_delete_min] the priority is empty");
+        err_sys("[vn_pq_delete_min] the priority queue is empty");
     }
     vn_priority_queue_node min = pq->nodes[1];
+    return min;
+}
+
+vn_priority_queue_node vn_pq_delete_min(vn_priority_queue *pq) {
+    vn_priority_queue_node min = vn_pq_min(pq);
     vn_exch(pq, 1, pq->size--);
     vn_sink(pq, 1);
     return min;

@@ -9,6 +9,7 @@
 #include <fcntl.h>
 #include <signal.h>
 #include <getopt.h>
+#include <sys/time.h>
 #include <sys/types.h>
 #include <sys/socket.h>
 #include <sys/mman.h>
@@ -20,6 +21,7 @@
 #include "socketlib.h"
 #include "vn_request.h"
 #include "vn_epoll.h"
+#include "vn_event_timer.h"
 #include "util.h"
 #include "error.h"
 
@@ -74,8 +76,9 @@ int main(int argc, char *argv[]) {
     struct sockaddr_storage clientaddr; 
     struct epoll_event ep_event;
     vn_http_event *http_event;
+    time_t time;
 
-    vn_parse_options(argc, argv);
+    // vn_parse_options(argc, argv);
 
     /* 
      * Install signal handler for SIGPIPE.
@@ -109,8 +112,11 @@ int main(int argc, char *argv[]) {
     ep_event.data.ptr = (void *) http_event;
     vn_epoll_add(epfd, listenfd, &ep_event);
 
+    vn_event_timer_init();
+
     while (VN_RUNNING) {
-        nready = vn_epoll_wait(epfd, events, VN_MAXEVENTS, -1);
+        time = vn_event_find_timer();
+        nready = vn_epoll_wait(epfd, events, VN_MAXEVENTS, time);
         if (nready < 0) {
             if (errno == EINTR) {
                 continue;   /* Restart if interrupted by signal */
@@ -118,6 +124,9 @@ int main(int argc, char *argv[]) {
                 err_sys("[main] vn_epoll_wait error");
             }
         }
+
+        vn_time_update();
+        vn_event_expire_timers();
 
         /* Deal with returned list of events */
         for (i = 0; i < nready; i++) {
@@ -151,6 +160,8 @@ int main(int argc, char *argv[]) {
                     new_ep_ev.events = EPOLLIN | EPOLLET;
                     new_ep_ev.data.ptr = (void *) new_http_ev;
                     vn_epoll_add(epfd, connfd, &new_ep_ev);
+
+                    vn_event_add_timer(new_http_ev, VN_DEFAULT_TIMEOUT);
                     
                 }
             /* End of fd == listenfd */
@@ -172,6 +183,7 @@ void vn_init_http_event(vn_http_event *event, int fd, int epfd) {
     event->bufptr = event->buf;
     event->remain_size = VN_BUFSIZE;
     vn_init_http_request(&event->hr);
+    event->handler = vn_close_http_event;
 }
 
 void vn_handle_http_event(vn_http_event *event) {
@@ -276,6 +288,14 @@ void vn_handle_get_event(vn_http_event *event) {
         }
     }
 
+}
+
+void vn_close_http_event(void *event) {
+    vn_http_event *ev = (vn_http_event *) event;
+    if (close(ev->fd) < 0) {
+        err_sys("[vn_close_http_event] close error");
+    }
+    free(ev);
 }
 
 void vn_build_resp_headers(char *headers, int code, const char *reason, const char *content_type, 
