@@ -8,12 +8,12 @@
 #include <sys/time.h>
 #include "vn_priority_queue.h"
 
-/* Default timeout (ms) */
-#define VN_DEFAULT_TIMEOUT 500
+#define VN_DEFAULT_TIMEOUT  500    /* ms */
 
-#define vn_gettimeofday(tp) (void) gettimeofday(tp, NULL);
+typedef time_t        vn_sec_t;    /* Seconds */
+typedef unsigned long vn_msec_t;   /* Milliseconds */
 
-volatile time_t vn_current_msec;
+volatile vn_msec_t vn_current_msec;
 
 vn_priority_queue pq;
 
@@ -21,10 +21,10 @@ int vn_event_timer_init(void);
 
 void vn_time_update(void);
 
-time_t vn_event_find_timer(void);
+vn_msec_t vn_event_find_timer(void);
 
 void vn_event_expire_timers(void);
 
-void vn_event_add_timer(vn_http_event *event, time_t timer);
+void vn_event_add_timer(vn_http_event *event, vn_msec_t timer);
 
 #endif /* VINO_VN_EVENT_TIMER_H */

@@ -25,18 +25,18 @@
 #include "util.h"
 #include "error.h"
 
-#define VINO_VERSION "1.0"
-#define PORT         "8080"
-#define VN_RUNNING   1
-#define VN_ACCEPT    1
+#define VINO_VERSION  "1.0"
+#define PORT          "8080"
+#define VN_RUNNING    1
+#define VN_ACCEPT     1
 
 static char *port;
 
 static const struct option long_options[] = {
-    {"port", required_argument, NULL, 'p'},
-    {"help", no_argument, NULL, '?'},
-    {"version", no_argument, NULL, 'V'},
-    {NULL, 0, NULL, 0}
+    { "port", required_argument, NULL, 'p' },
+    { "help", no_argument, NULL, '?' },
+    { "version", no_argument, NULL, 'V' },
+    { NULL, 0, NULL, 0 }
 };
 
 static void vn_usage(char *program) {
@@ -54,17 +54,17 @@ static void vn_parse_options(int argc, char *argv[]) {
     int options_index = 0;
 
     if (1 == argc) {
-        vn_usage(argv[0]);
         return;
     }
 
-    while ((opt = getopt_long(argc, argv, "Vp:?h", long_options, &options_index)) != EOF) {
+    while ((opt = getopt_long(argc, argv, "p:h?V", long_options, &options_index)) != EOF) {
         switch (opt) {
             case  0 : break;
             case 'p': port = optarg; break;
             case 'h':
             case '?': vn_usage(argv[0]); exit(0);
             case 'V': printf(VINO_VERSION"\n"); exit(0);
+            default : break;
         }
     }
 }
@@ -76,9 +76,9 @@ int main(int argc, char *argv[]) {
     struct sockaddr_storage clientaddr; 
     struct epoll_event ep_event;
     vn_http_event *http_event;
-    time_t time;
+    vn_msec_t time;
 
-    // vn_parse_options(argc, argv);
+    vn_parse_options(argc, argv);
 
     /* 
      * Install signal handler for SIGPIPE.
@@ -117,6 +117,7 @@ int main(int argc, char *argv[]) {
     while (VN_RUNNING) {
         time = vn_event_find_timer();
         nready = vn_epoll_wait(epfd, events, VN_MAXEVENTS, time);
+
         if (nready < 0) {
             if (errno == EINTR) {
                 continue;   /* Restart if interrupted by signal */
@@ -216,13 +217,13 @@ void vn_handle_http_event(vn_http_event *event) {
             err_sys("[vn_serve_http_event] vn_parse_http_request error");
         }
     } else {
-        printf("Haven't buffer completely\n");
+        // printf("Haven't buffer completely\n");
         return; 
     }
 
     hr = &event->hr;
 
-    vn_print_http_request(&event->hr);
+    // vn_print_http_request(&event->hr);
 
     if (!vn_str_cmp(&hr->method, "GET")) {
         vn_handle_get_event(event);
@@ -286,6 +287,10 @@ void vn_handle_get_event(vn_http_event *event) {
         if (munmap(srcp, filesize) < 0) {
             err_sys("[vn_handle_get_event] munmap error");
         }
+
+        if (close(event->fd) < 0) {
+            err_sys("[vn_handle_get_event] close error");
+        }
     }
 
 }
@@ -295,6 +300,7 @@ void vn_close_http_event(void *event) {
     if (close(ev->fd) < 0) {
         err_sys("[vn_close_http_event] close error");
     }
+    printf("vn_close_http_event...");
     free(ev);
 }
 

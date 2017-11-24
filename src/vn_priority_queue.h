@@ -5,17 +5,19 @@
 #ifndef VINO_VN_PRIORITY_QUEUE_H
 #define VINO_VN_PRIORITY_QUEUE_H
 
-#include <time.h>
+#include <sys/time.h>
 #include "vino.h"
 
 #define VN_MAX_PQ_SIZE 8192
+
+typedef unsigned long vn_msec_t;   /* Milliseconds */
 
 /*
  * Priority queue node structure.
  */
 typedef struct vn_priority_queue_node_s {
-    time_t          key;      /* Comparable key */
-    vn_http_event   *data;    /* Specific data */
+    vn_msec_t          key;      /* Comparable key */
+    vn_http_event      *data;    /* Specific data */
 } vn_priority_queue_node;
 
 /* 
