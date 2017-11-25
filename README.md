@@ -24,7 +24,7 @@ By default the server accepts connections on port 8080, if you want to assign ot
 
 ## Performance 
 
-I have made a small performance test with [Nginx](https://nginx.org/en/), a high-performance web server and reverse proxy (I have learned a lot from it). In a way it is not a fair comparasion, for the processing logic in Vino relatively simpler than Nginx.
+I have made a small performance test with [Nginx](https://nginx.org/en/), a high-performance web server and reverse proxy (I have learned a lot from it). In a way it is not a fair comparison, for the processing logic in Vino is relatively simpler than Nginx.
 
 ```markdown
 ab -n 10000 -c 500 http://<IP>:<PORT>/index.html
