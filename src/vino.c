@@ -22,15 +22,16 @@
 #include "vn_request.h"
 #include "vn_epoll.h"
 #include "vn_event_timer.h"
+#include "vn_logger.h"
 #include "util.h"
 #include "error.h"
 
 #define VINO_VERSION  "1.0"
-#define PORT          "8080"
+#define VN_PORT       "8080"
 #define VN_RUNNING    1
 #define VN_ACCEPT     1
 
-static char *port;
+static char *port = VN_PORT;
 
 static const struct option long_options[] = {
     { "port", required_argument, NULL, 'p' },
@@ -88,9 +89,10 @@ int main(int argc, char *argv[]) {
      */
     vn_signal(SIGPIPE, SIG_IGN);
 
-    if ((listenfd = open_listenfd(PORT)) < 0) {
+    if ((listenfd = open_listenfd(port)) < 0) {
         err_sys("[main] open_listenfd error");
     }
+    vn_log_info("Listen file descriptor [%d] opened.", listenfd);
 
     if ((rv = make_socket_non_blocking(listenfd)) != 0) {
         err_sys("[main] make_socket_non_blocking error");
@@ -113,6 +115,10 @@ int main(int argc, char *argv[]) {
     vn_epoll_add(epfd, listenfd, &ep_event);
 
     vn_event_timer_init();
+    vn_log_info("Timer initialized.");
+
+    vn_log_info("Server started, Vino version "VINO_VERSION".");
+    vn_log_info("The server is now ready to accept connections on port %s.", port);
 
     while (VN_RUNNING) {
         time = vn_event_find_timer();
