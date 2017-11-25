@@ -6,6 +6,7 @@
 #define VINO_VN_EVENT_TIMER_H
 
 #include <sys/time.h>
+#include "vn_request.h"
 #include "vn_priority_queue.h"
 
 #define VN_DEFAULT_TIMEOUT  500    /* ms */

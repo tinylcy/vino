@@ -2,6 +2,7 @@
  *  Copyright (C) Chenyang Li
  *  Copyright (C) Vino
  */
+#include <stdlib.h>
 #include <sys/time.h>
 
 #include "vn_event_timer.h"
@@ -32,30 +33,36 @@ void vn_time_update(void) {
 
 vn_msec_t vn_event_find_timer(void) {
     long timer;
-    vn_priority_queue_node node;
+    vn_priority_queue_node *node;
 
     if (vn_pq_isempty(&pq)) {
         return 0;
     }
 
     node = vn_pq_min(&pq);
-    timer = node.key - vn_current_msec;
+    timer = node->key - vn_current_msec;
     return timer > 0 ? timer : 0;
 }
 
 void vn_event_expire_timers(void) {
-    vn_priority_queue_node node;
+    vn_priority_queue_node *node;
     vn_http_event *event;
 
     while (!vn_pq_isempty(&pq)) {
         node = vn_pq_min(&pq);
+
+        if (node->deleted == VN_PQ_DELETED) {
+            vn_pq_delete_min(&pq);
+            continue;
+        }
+
         /* node.key > vn_current_msec */
-        if (node.key - vn_current_msec > 0) {
+        if (node->key - vn_current_msec > 0) {
             return;
         }
 
         node = vn_pq_delete_min(&pq);
-        event = node.data;
+        event = (vn_http_event *) node->data;
         if (!(*event->handler)) {
             (*event->handler)(event);
         }
@@ -63,11 +70,17 @@ void vn_event_expire_timers(void) {
 }
 
 void vn_event_add_timer(vn_http_event *event, vn_msec_t timer) {
-    vn_priority_queue_node node;
+    vn_priority_queue_node *node;
     vn_msec_t key;
 
+    if ((node = (vn_priority_queue_node *) malloc(sizeof(vn_priority_queue_node))) == NULL) {
+        err_sys("[vn_event_add_timer] malloc error");
+    }
     key = vn_current_msec + timer;
-    node.key = key;
-    node.data = event;
+    node->key = key;
+    node->data = (void *) event;
+    node->deleted = VN_PQ_NOT_DELETED;
     vn_pq_insert(&pq, node);
+
+    event->pq_node = node;
 }

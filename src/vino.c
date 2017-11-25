@@ -185,6 +185,7 @@ void vn_init_http_event(vn_http_event *event, int fd, int epfd) {
     event->remain_size = VN_BUFSIZE;
     vn_init_http_request(&event->hr);
     event->handler = vn_close_http_event;
+    event->pq_node = NULL;
 }
 
 void vn_handle_http_event(vn_http_event *event) {
@@ -228,7 +229,7 @@ void vn_handle_http_event(vn_http_event *event) {
     if (!vn_str_cmp(&hr->method, "GET")) {
         vn_handle_get_event(event);
     } else if (!vn_str_cmp(&hr->method, "POST")) {
-
+        // TODO
     }
 
 }
@@ -236,6 +237,8 @@ void vn_handle_http_event(vn_http_event *event) {
 void vn_handle_get_event(vn_http_event *event) {
     vn_http_request *hr;
     char uri[VN_MAX_HTTP_HEADER_VALUE], filepath[VN_MAX_HTTP_HEADER_VALUE];
+
+    vn_pq_delete_node(event->pq_node);
 
     hr = &event->hr;
     if (vn_get_string(&hr->uri, uri, VN_MAX_HTTP_HEADER_VALUE) == -1) {

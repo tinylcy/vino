@@ -7,25 +7,11 @@
 
 #include "vn_request.h"
 
-#define VN_BUFSIZE                   8192
 #define VN_HEADERS_SIZE              4096
 #define VN_BODY_SIZE                 8192
 #define VN_FILETYPE_SIZE             50
 #define VN_PARENT_DIR                "../"
 #define VN_DEFAULT_STATIC_RES_DIR    "html"
-
-typedef void (*timeout_handler)(void *);
-
-/* HTTP request event */
-typedef struct vn_http_event_s {
-    int               fd;
-    int               epfd;
-    char              buf[VN_BUFSIZE];
-    char              *bufptr;
-    size_t            remain_size;
-    vn_http_request   hr;
-    timeout_handler   handler;
-} vn_http_event;
 
 /*
  * Initialize HTTP request event.

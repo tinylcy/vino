@@ -6,8 +6,10 @@
 #define VINO_VN_REQUEST_H
 
 #include <stdio.h>
+#include "vn_priority_queue.h"
 #include "util.h"
 
+#define VN_BUFSIZE                8192
 #define VN_MAX_HTTP_HEADERS       20
 #define VN_MAX_HTTP_HEADER_NAME   50
 #define VN_MAX_HTTP_HEADER_VALUE  200
@@ -31,6 +33,20 @@ typedef struct vn_http_request_s {
     vn_str         header_names[VN_MAX_HTTP_HEADERS];
     vn_str         header_values[VN_MAX_HTTP_HEADERS];
 } vn_http_request;
+
+typedef void (*timeout_handler)(void *);
+
+/* HTTP request event */
+typedef struct vn_http_event_s {
+    int                     fd;
+    int                     epfd;
+    char                    buf[VN_BUFSIZE];
+    char                    *bufptr;
+    size_t                  remain_size;
+    vn_http_request         hr;
+    timeout_handler         handler;
+    vn_priority_queue_node  *pq_node;
+} vn_http_event;
 
 /*
  * Fetch substring from `s` to `end` into `vs`.
