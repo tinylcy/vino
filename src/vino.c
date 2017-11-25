@@ -42,7 +42,7 @@ static const struct option long_options[] = {
 
 static void vn_usage(char *program) {
     fprintf(stderr,
-            "%s [option]...\n"
+            "%s [options]...\n"
             " -p|--port <port>       Specify port for vino. Default 8080.\n"
             " -?|-h|--help           This information.\n"
             " -V|--version           Display program version.\n",
@@ -58,7 +58,7 @@ static void vn_parse_options(int argc, char *argv[]) {
         return;
     }
 
-    while ((opt = getopt_long(argc, argv, "p:h?V", long_options, &options_index)) != EOF) {
+    while ((opt = getopt_long(argc, argv, "?p:hV", long_options, &options_index)) != EOF) {
         switch (opt) {
             case  0 : break;
             case 'p': port = optarg; break;
@@ -210,7 +210,7 @@ void vn_handle_http_event(vn_http_event *event) {
     if (nread < 0) {
         if (errno != EAGAIN) {
             err_sys("[vn_handle_http_event] rio_readn error");
-        } 
+        }
     }
 
     /*
@@ -309,7 +309,6 @@ void vn_close_http_event(void *event) {
     if (close(ev->fd) < 0) {
         err_sys("[vn_close_http_event] close error");
     }
-    printf("vn_close_http_event...");
     free(ev);
 }
 

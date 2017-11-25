@@ -56,16 +56,20 @@ void vn_event_expire_timers(void) {
             continue;
         }
 
-        /* node.key > vn_current_msec */
-        if (node->key - vn_current_msec > 0) {
+        /* 
+         * If node.key < vn_current_msec, timeout.
+         * Be careful, the gap should be cast to Long type.
+         */
+        if ((long) (node->key - vn_current_msec) > 0) {
             return;
         }
 
-        node = vn_pq_delete_min(&pq);
         event = (vn_http_event *) node->data;
-        if (!(*event->handler)) {
+    
+        if (event->handler) {
             (*event->handler)(event);
         }
+        vn_pq_delete_min(&pq);
     }
 }
 

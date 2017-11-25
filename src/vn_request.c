@@ -33,7 +33,8 @@ int vn_http_get_request_len(const char *buf, size_t buf_len) {
     if (buf == NULL || strlen(buf) == 0 || buf_len == 0) {
         return 0;
     }
-    for (i = 0; i < buf_len; i++) {
+
+    for (i = 0; i < buf_len && buf[i] != '\0'; i++) {
         if (!isprint(buf[i]) && buf[i] != CR && buf[i] != LF) {
             return -1;
         } else if (buf[i] == LF && i + 2 < buf_len && buf[i + 1] == CR && buf[i + 2] == LF) {

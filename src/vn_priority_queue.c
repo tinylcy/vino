@@ -80,7 +80,8 @@ vn_priority_queue_node *vn_pq_delete_node(vn_priority_queue_node *node) {
         return NULL;
     }
     if (node->deleted == VN_PQ_DELETED) {
-        err_sys("[vn_pq_delete_node] the node have been deleted");
+        // TODO
+        // err_sys("[vn_pq_delete_node] the node have been deleted");
     }
     node->deleted = VN_PQ_DELETED;
 }
