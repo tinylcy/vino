@@ -26,11 +26,6 @@
 #include "util.h"
 #include "error.h"
 
-#define VINO_VERSION  "2.0"
-#define VN_PORT       "8080"
-#define VN_RUNNING    1
-#define VN_ACCEPT     1
-
 static char *port = VN_PORT;
 
 static const struct option long_options[] = {
@@ -42,7 +37,7 @@ static const struct option long_options[] = {
 
 static void vn_usage(char *program) {
     fprintf(stderr,
-            "%s [options]...\n"
+            "%s [option]...\n"
             " -p|--port <port>       Specify port for vino. Default 8080.\n"
             " -?|-h|--help           This information.\n"
             " -V|--version           Display program version.\n",
@@ -58,13 +53,13 @@ static void vn_parse_options(int argc, char *argv[]) {
         return;
     }
 
-    while ((opt = getopt_long(argc, argv, "?p:hV", long_options, &options_index)) != EOF) {
+    while ((opt = getopt_long(argc, argv, "Vp:?h", long_options, &options_index)) != EOF) {
         switch (opt) {
             case  0 : break;
             case 'p': port = optarg; break;
+            case 'V': printf(VINO_VERSION"\n"); exit(0);
             case 'h':
             case '?': vn_usage(argv[0]); exit(0);
-            case 'V': printf(VINO_VERSION"\n"); exit(0);
             default : break;
         }
     }
@@ -238,7 +233,7 @@ void vn_handle_http_event(vn_http_event *event) {
     if (!vn_str_cmp(&hr->method, "GET")) {
         vn_handle_get_event(event);
     } else if (!vn_str_cmp(&hr->method, "POST")) {
-            // TODO
+        // TODO
     }
 
 }
@@ -257,6 +252,9 @@ void vn_handle_get_event(vn_http_event *event) {
     if (vn_get_string(&hr->uri, uri, VN_MAX_HTTP_HEADER_VALUE) == -1) {
         err_sys("[vn_handle_get_event] vn_get_string error");
     }
+    if (strlen(uri) == 1 && !strncmp(uri, "/", 1)) {
+        strncpy(uri, VN_DEFAULT_PAGE, strlen(VN_DEFAULT_PAGE));
+    }
 
     /* Append default static resource path before HTTP request's uri */
     memset(filepath, '\0', VN_MAX_HTTP_HEADER_VALUE);
@@ -270,60 +268,66 @@ void vn_handle_get_event(vn_http_event *event) {
         err_sys("[vn_handle_get_event] strcat [uri] error");
     }
 
-    /* Check if a file exist */
     char headers[VN_HEADERS_SIZE], body[VN_BODY_SIZE];
     int srcfd;
     void *srcp;
     unsigned int filesize;
     char filetype[VN_FILETYPE_SIZE];
+    vn_str *connection;
+    short conn_flag;
     
     // TODO: nwrite = rio_writen(fd, buf, size); Check if `nwrite` == `size`.
     if (vn_check_file_exist(filepath) < 0) {
-        vn_build_resp_error_body(body);
-        vn_build_resp_headers(headers, 404, "Not Found", "text/html", strlen(body));
+        vn_build_resp_404_body(body, uri);
+        vn_build_resp_headers(headers, 404, "Not Found", "text/html", strlen(body), VN_CONN_CLOSE);
         rio_writen(event->fd, (void *) headers, strlen(headers));
         rio_writen(event->fd, (void *) body, strlen(body));
-    } else {
+        vn_close_http_event((void *) event);
+        return;
+    } 
         // TODO: Check permission
-        if ((srcfd = open(filepath, O_RDONLY, 0)) < 0) {
-            err_sys("[vn_handle_get_event] open error");
-        }
-        filesize = vn_get_filesize(filepath);
-        /* Map the target file into memory */
-        if ((srcp = mmap(NULL, filesize, PROT_READ, MAP_PRIVATE, srcfd, 0)) == MAP_FAILED) {
-            err_sys("[vn_handle_get_event] mmap error");
-        }
-        if (close(srcfd) < 0) {
-            err_sys("[vn_handle_get_event] close srcfd error");
-        }
-        vn_get_filetype(filepath, filetype);
-        vn_build_resp_headers(headers, 200, "OK", filetype, filesize);
-        rio_writen(event->fd, headers, strlen(headers));
-        rio_writen(event->fd, srcp, filesize);
-        if (munmap(srcp, filesize) < 0) {
-            err_sys("[vn_handle_get_event] munmap error");
-        }
+    if ((srcfd = open(filepath, O_RDONLY, 0)) < 0) {
+        err_sys("[vn_handle_get_event] open error");
+    }
+    filesize = vn_get_filesize(filepath);
+    /* Map the target file into memory */
+    if ((srcp = mmap(NULL, filesize, PROT_READ, MAP_PRIVATE, srcfd, 0)) == MAP_FAILED) {
+        err_sys("[vn_handle_get_event] mmap error");
+    }
+    if (close(srcfd) < 0) {
+        err_sys("[vn_handle_get_event] close srcfd error");
+    }
+
+    /* Build response header by Connection header */
+    vn_get_filetype(filepath, filetype);
+    connection = vn_get_http_header(hr, "Connection");
+    if (NULL != connection && !vn_str_cmp(connection, "keep-alive")) {
+        vn_build_resp_headers(headers, 200, "OK", filetype, filesize, VN_CONN_KEEP_ALIVE);
+        conn_flag = VN_CONN_KEEP_ALIVE;
+    } else {
+        vn_build_resp_headers(headers, 200, "OK", filetype, filesize, VN_CONN_CLOSE);
+        conn_flag = VN_CONN_CLOSE;
+    }
+
+    /* Send response */
+    rio_writen(event->fd, headers, strlen(headers));
+    rio_writen(event->fd, srcp, filesize);
+    if (munmap(srcp, filesize) < 0) {
+        err_sys("[vn_handle_get_event] munmap error");
     }
 
     /* 
-     * If we use persistent connection (Connection: keep-alive),
-     * some connections will share the same buffer, therefore the buffer
+     * If persistent connection flag (Connection: keep-alive) is set,
+     * several connections will share the same buffer, therefore the buffer
      * should be reset before accepting the next connection.
-     * 
-     * TODO: Make a judgement before empty the buffer.
      */
-    vn_str *connection;
-    connection = vn_get_http_header(hr, "Connection");
-    if (NULL != connection && !vn_str_cmp(connection, "keep-alive")) {
+    if (VN_CONN_KEEP_ALIVE == conn_flag) {
         memset(event->buf, '\0', VN_BUFSIZE);
         event->bufptr = event->buf;
         event->remain_size = VN_BUFSIZE;
-
         vn_event_add_timer(event, VN_DEFAULT_TIMEOUT);
     } else {
-        if (close(event->fd) < 0) {
-            err_sys("[vn_handle_get_event] close error");
-        }
+        vn_close_http_event((void *) event);
     }
 
 }
@@ -337,22 +341,28 @@ void vn_close_http_event(void *event) {
 }
 
 void vn_build_resp_headers(char *headers, int code, const char *reason, const char *content_type, 
-                            unsigned int content_length) {
+                            unsigned int content_length, short keep_alive) {
+    char *conn;
     if (NULL == reason) {
         reason = vn_status_message(code);
     }
+    conn = (keep_alive == VN_CONN_KEEP_ALIVE) ? "keep-alive" : "close";
     sprintf(headers, "HTTP/1.1 %d %s\r\n", code, reason);
     sprintf(headers, "%sServer: Vino\r\n", headers);
     sprintf(headers, "%sContent-type: %s\r\n", headers, content_type);
-    sprintf(headers, "%sConnection: keep-alive\r\n", headers);
+    sprintf(headers, "%sConnection: %s\r\n", headers, conn);
     sprintf(headers, "%sContent-length: %d\r\n", headers, (int)content_length);
     sprintf(headers, "%s\r\n", headers);
 }
 
-void vn_build_resp_error_body(char *body) {
-    sprintf(body, "<html><title>Vino Error</title>");
-    sprintf(body, "%s<body bgcolor=\"ffffff\">\n", body);
-    sprintf(body, "%sVino Error.", body);
+void vn_build_resp_404_body(char *body, const char *uri) {
+    sprintf(body, "<html><head>");
+    sprintf(body, "%s<title>404 Not Found</title>", body);
+    sprintf(body, "%s</head><body>", body);
+    sprintf(body, "%s<h1>Not Found</h1>", body);
+    sprintf(body, "%s<p>The requested URL %s was not found on this server.</p>", body, uri);
+    sprintf(body, "%s<hr>", body);
+    sprintf(body, "%s<address>Vino Server</address>", body);
     sprintf(body, "%s</body></html>", body);
 }
 
