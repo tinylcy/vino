@@ -106,6 +106,16 @@ int vn_parse_http_headers(const char *buf, int buf_len, vn_http_request *hr) {
     }
 }
 
+vn_str *vn_get_http_header(vn_http_request *hr, const char *name) {
+    int i;
+    for (i = 0; i < hr->header_cnt; i++) {
+        if (!vn_str_cmp(&hr->header_names[i], name)) {
+            return &hr->header_values[i];
+        }
+    }
+    return NULL;
+}
+
 void vn_print_http_request(vn_http_request *hr) {
     int i;
     char name[VN_MAX_HTTP_HEADER_NAME], value[VN_MAX_HTTP_HEADER_VALUE];

@@ -26,7 +26,7 @@
 #include "util.h"
 #include "error.h"
 
-#define VINO_VERSION  "1.0"
+#define VINO_VERSION  "2.0"
 #define VN_PORT       "8080"
 #define VN_RUNNING    1
 #define VN_ACCEPT     1
@@ -197,18 +197,21 @@ void vn_init_http_event(vn_http_event *event, int fd, int epfd) {
 void vn_handle_http_event(vn_http_event *event) {
     int nread, buf_len;
     int rv;
-    rio_t rio;
     vn_http_request *hr;
-
-    rio_readinitb(&rio, event->fd);
 
     while ((nread = rio_readn(event->fd, event->bufptr, event->remain_size)) > 0) {
         event->bufptr += nread;
         event->remain_size -= nread;
     }
 
+    if (0 == nread) {
+        // TODO: logger
+    }
+
     if (nread < 0) {
-        if (errno != EAGAIN) {
+        if (errno == EAGAIN) {
+            // break;
+        } else {
             err_sys("[vn_handle_http_event] rio_readn error");
         }
     }
@@ -224,7 +227,7 @@ void vn_handle_http_event(vn_http_event *event) {
             err_sys("[vn_serve_http_event] vn_parse_http_request error");
         }
     } else {
-        // printf("Haven't buffer completely\n");
+        // TODO: logger
         return; 
     }
 
@@ -235,7 +238,7 @@ void vn_handle_http_event(vn_http_event *event) {
     if (!vn_str_cmp(&hr->method, "GET")) {
         vn_handle_get_event(event);
     } else if (!vn_str_cmp(&hr->method, "POST")) {
-        // TODO
+            // TODO
     }
 
 }
@@ -244,6 +247,10 @@ void vn_handle_get_event(vn_http_event *event) {
     vn_http_request *hr;
     char uri[VN_MAX_HTTP_HEADER_VALUE], filepath[VN_MAX_HTTP_HEADER_VALUE];
 
+    /* 
+     * Remove the corresponding node in priority queue. 
+     * This is because the event will be dealt with soon.
+     */
     vn_pq_delete_node(event->pq_node);
 
     hr = &event->hr;
@@ -296,7 +303,24 @@ void vn_handle_get_event(vn_http_event *event) {
         if (munmap(srcp, filesize) < 0) {
             err_sys("[vn_handle_get_event] munmap error");
         }
+    }
 
+    /* 
+     * If we use persistent connection (Connection: keep-alive),
+     * some connections will share the same buffer, therefore the buffer
+     * should be reset before accepting the next connection.
+     * 
+     * TODO: Make a judgement before empty the buffer.
+     */
+    vn_str *connection;
+    connection = vn_get_http_header(hr, "Connection");
+    if (NULL != connection && !vn_str_cmp(connection, "keep-alive")) {
+        memset(event->buf, '\0', VN_BUFSIZE);
+        event->bufptr = event->buf;
+        event->remain_size = VN_BUFSIZE;
+
+        vn_event_add_timer(event, VN_DEFAULT_TIMEOUT);
+    } else {
         if (close(event->fd) < 0) {
             err_sys("[vn_handle_get_event] close error");
         }
@@ -320,7 +344,7 @@ void vn_build_resp_headers(char *headers, int code, const char *reason, const ch
     sprintf(headers, "HTTP/1.1 %d %s\r\n", code, reason);
     sprintf(headers, "%sServer: Vino\r\n", headers);
     sprintf(headers, "%sContent-type: %s\r\n", headers, content_type);
-    sprintf(headers, "%sConnection: close\r\n", headers);
+    sprintf(headers, "%sConnection: keep-alive\r\n", headers);
     sprintf(headers, "%sContent-length: %d\r\n", headers, (int)content_length);
     sprintf(headers, "%s\r\n", headers);
 }
