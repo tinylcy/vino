@@ -117,7 +117,16 @@ void vn_signal(int signum, void (*handler)(int)) {
     struct sigaction sa;
     memset(&sa, '\0', sizeof(struct sigaction));
     sa.sa_handler = handler;
-    sa.sa_flags = 0;
+    sigemptyset(&sa.sa_mask);
+
+    if (signum == SIGALRM) {
+#ifdef SA_INTERRUPT
+        sa.sa_flags |= SA_INTERRUPT;
+#endif
+    } else {
+        sa.sa_flags |= SA_RESTART;
+    }
+    
     if (sigaction(signum, &sa, NULL) < 0) {
         err_sys("[vn_signal] sigaction error");
     }

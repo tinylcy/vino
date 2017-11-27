@@ -69,7 +69,6 @@ unsigned int vn_get_filesize(const char *filepath);
 
 /*
  * Set the disposition of the signal `signum` to `handler`.
- * This method is only suitable for handler SIG_IGN & SIG_DFL.
  */
 void vn_signal(int signum, void (*handler)(int));
 

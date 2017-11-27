@@ -65,6 +65,20 @@ static void vn_parse_options(int argc, char *argv[]) {
     }
 }
 
+/*
+ * Register a handler for signal SIGUSR1.
+ * 
+ * Type `kill -USR1 <PID>` to trigger this handler,
+ * the program will exit normally. 
+ */
+static void vn_sig_usr1_handler(int signum) {
+    if (signum != SIGUSR1) {
+        err_sys("[vn_sig_usr1_handler] signum must be SIGUSR1");
+    }
+    vn_log_info("Exiting on SIGUSR1...");
+    exit(0);
+}
+
 int main(int argc, char *argv[]) {
     int rv, epfd, listenfd;
     int i, nready, fd, connfd;
@@ -83,6 +97,7 @@ int main(int argc, char *argv[]) {
      * will create a SIGPIPE signal to the process.
      */
     vn_signal(SIGPIPE, SIG_IGN);
+    vn_signal(SIGUSR1, vn_sig_usr1_handler);
 
     if ((listenfd = open_listenfd(port)) < 0) {
         err_sys("[main] open_listenfd error");
@@ -173,7 +188,6 @@ int main(int argc, char *argv[]) {
             }
         }
     }
-
 
     return 0;
 }
