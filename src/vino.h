@@ -7,10 +7,11 @@
 
 #include "vn_request.h"
 
-#define VINO_VERSION   "2.0"
-#define VN_PORT        "8080"
-#define VN_RUNNING     1
-#define VN_ACCEPT      1
+#define VINO_VERSION      "2.0"
+#define VN_PORT           "8080"
+#define VN_RUNNING        1
+#define VN_ACCEPT         1
+#define VN_KEEP_READING   1
 
 #define VN_HEADERS_SIZE              4096
 #define VN_BODY_SIZE                 8192

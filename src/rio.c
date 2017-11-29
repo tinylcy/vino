@@ -22,7 +22,10 @@ ssize_t rio_readn(int fd, void *userbuf, size_t n) {
         if ((nread = read(fd, bufp, nleft)) < 0) {
             if (errno == EINTR) {
                 nread = 0;
-            } else {
+            } else if (errno == EAGAIN) {   /* Make some modification for non-blocking I/O */
+                return (n - nleft);         /* Now nread = -1 */
+            }
+            else {
                 return -1;
             }
         } else if (nread == 0) {

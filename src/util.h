@@ -17,8 +17,8 @@
 
 /* Self-defined string structure */
 typedef struct vn_str_s {
-    const char *p;         /* String pointer */
-    size_t     len;        /* String length */
+    const char    *p;         /* String pointer */
+    size_t        len;        /* String length */
 } vn_str;
 
 /*  Vino configuration infomation */
@@ -45,6 +45,11 @@ void vn_check_null(int num, ...);
  * Compare a self-defined string with a regular string.
  */
 int vn_str_cmp(const vn_str *str1, const char *str2);
+
+/*
+ * Convert a self-defined string pointed by `str` to int.
+ */ 
+int vn_str_atoi(const vn_str *str);
 
 /* 
  * Set the O_NONBLOCK flag on the descriptor.

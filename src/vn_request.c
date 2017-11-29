@@ -28,34 +28,61 @@ void vn_init_http_request(vn_http_request *hr) {
     hr->header_cnt = 0;
 }
 
-int vn_http_get_request_len(const char *buf, size_t buf_len) {
+int vn_http_line_headers_buffer(vn_http_event *event, size_t buf_len) {
+    vn_http_request *hr;
+    char *buf;
     int i;
+
+    hr = &event->hr;
+    buf = event->buf;
     if (buf == NULL || strlen(buf) == 0 || buf_len == 0) {
-        return 0;
+        return VN_AGAIN;
     }
 
     for (i = 0; i < buf_len && buf[i] != '\0'; i++) {
         if (!isprint(buf[i]) && buf[i] != CR && buf[i] != LF) {
-            return -1;
+            return VN_MALFORMED;
         } else if (buf[i] == LF && i + 2 < buf_len && buf[i + 1] == CR && buf[i + 2] == LF) {
-            return i + 3;
+            hr->body.p = buf + i + 3;
+            return VN_COMPLETED;
         }
     }
-
-    return 0;
+    return VN_AGAIN;
 }
 
-int vn_parse_http_request(const char *buf, int buf_len, vn_http_request *hr) {
+int vn_http_body_buffer(vn_http_event *event, size_t buf_len) {
+    const char *buf;
+    vn_str *body_len_str;
+    int i, body_len_int;
+    vn_http_request *hr;
+
+    hr = &event->hr;
+
+    body_len_str = vn_get_http_header(hr, "Content-Length");
+    if (!vn_str_cmp(&hr->method, "get") || NULL == body_len_str) {
+        return VN_COMPLETED;
+    }
+
+    body_len_int = vn_str_atoi(body_len_str);
+
+    buf = hr->body.p;
+    for (i = 0; i < body_len_int && i < buf_len && buf[i] != '\0'; i++) {
+        if (!isprint(buf[i]) && buf[i] != CR && buf[i] != LF) {
+            return VN_MALFORMED;
+        }
+    }
+    if (i < body_len_int) {
+        return VN_AGAIN;
+    }
+    hr->body.len = hr->body_len = body_len_int;
+    return VN_COMPLETED;
+
+}
+
+int vn_parse_http_line_headers(const char *buf, int buf_len, vn_http_request *hr) {
     int len, rv;
     const char *s = buf, *end = buf + buf_len;
     const char *qs;  /* Point to the start of query string  */
-    
-    len = vn_http_get_request_len(buf, buf_len);
-    if (len == 0) {               /* HTTP request message is buffered incompletely */
-        return 0;
-    } else if (len < 0) {         /* HTTP request message is wrong format */
-        return -1;
-    }
 
     s = vn_skip(s, end, " ", &hr->method);
     s = vn_skip(s, end, " ", &hr->uri);
@@ -68,12 +95,12 @@ int vn_parse_http_request(const char *buf, int buf_len, vn_http_request *hr) {
         hr->uri.len = qs - hr->uri.p;
     }
 
-    rv = vn_parse_http_headers(s, end - s, hr);
-    if (rv < 0) {
-        return -1;
-    } else {
-        return buf_len;
+    rv = vn_parse_http_headers(s, hr->body.p - s, hr);
+    if (rv == -1) {
+        err_sys("[vn_parse_http_line_headers] vn_parse_http_headers error");
     }
+    
+    return 0;
 }
 
 int vn_parse_http_headers(const char *buf, int buf_len, vn_http_request *hr) {
@@ -101,9 +128,14 @@ int vn_parse_http_headers(const char *buf, int buf_len, vn_http_request *hr) {
 
     if (s < end) {
         return -1;
-    } else if (s == end) {
-        return buf_len;
     }
+
+    return 0;
+}
+
+int vn_parse_http_body(const char *buf, int buf_len, vn_http_request *hr) {
+    // TODO
+    return 0;
 }
 
 vn_str *vn_get_http_header(vn_http_request *hr, const char *name) {
@@ -147,5 +179,10 @@ void vn_print_http_request(vn_http_request *hr) {
         }
         printf("| %s | %s |\n", name, value);
     }
+
+    if (vn_get_string(&hr->body, value, VN_MAX_HTTP_HEADER_VALUE) < 0) {
+        err_sys("[print_http_request] vn_get_string [body] error");
+    }
+    printf("\nBody:\n%s", value);
 
 }

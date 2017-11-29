@@ -3,6 +3,7 @@
  *  Copyright (C) Vino
  */
 #include <stdio.h>
+#include <stdlib.h>
 #include <unistd.h>
 #include <fcntl.h>
 #include <string.h>
@@ -55,6 +56,19 @@ int vn_str_cmp(const vn_str *str1, const char *str2) {
         return (p1[i] < p2[i] ? -1 : 1); 
     }
    
+}
+
+int vn_str_atoi(const vn_str *str) {
+    char *buf;
+    int rv;
+
+    if ((buf = (char *) malloc(sizeof(char) * (str->len + 1))) == NULL) {
+        err_sys("[vn_str_atoi] malloc error");
+    }
+    strncpy(buf, str->p, str->len);
+    buf[str->len] = '\0';
+    rv = atoi(buf);
+    return rv;
 }
 
 void vn_check_null(int num, ...) {

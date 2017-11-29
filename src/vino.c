@@ -97,6 +97,12 @@ int main(int argc, char *argv[]) {
      * will create a SIGPIPE signal to the process.
      */
     vn_signal(SIGPIPE, SIG_IGN);
+
+    /* 
+     * Intall signal handler for SIGUSR1. 
+     * When use Gprof to analyze performance, the program 
+     * should exit normally. 
+     */
     vn_signal(SIGUSR1, vn_sig_usr1_handler);
 
     if ((listenfd = open_listenfd(port)) < 0) {
@@ -205,42 +211,63 @@ void vn_init_http_event(vn_http_event *event, int fd, int epfd) {
 
 void vn_handle_http_event(vn_http_event *event) {
     int nread, buf_len;
-    int rv;
+    int rv, request_completed, body_completed;
     vn_http_request *hr;
 
-    while ((nread = rio_readn(event->fd, event->bufptr, event->remain_size)) > 0) {
+    while (VN_KEEP_READING) {
+        nread = rio_readn(event->fd, event->bufptr, event->remain_size);
+
+        /* End of file, the remote has closed the connection. */
+        if (0 == nread) {
+            break;
+        }
+
+        /* If errno == EAGAIN, that means we have read all data. */
+        if (nread < 0) {
+            if (errno != EAGAIN) {
+                err_sys("[vn_handle_http_event] rio_readn error");
+            }
+            break;
+        }
+
         event->bufptr += nread;
         event->remain_size -= nread;
-    }
 
-    if (0 == nread) {
-        // TODO: logger
-    }
-
-    if (nread < 0) {
-        if (errno == EAGAIN) {
-            // break;
-        } else {
-            err_sys("[vn_handle_http_event] rio_readn error");
+        /* Check whether the request line and headers have been fully buffered. */
+        rv = vn_http_line_headers_buffer(event, VN_BUFSIZE);
+        if (rv == VN_MALFORMED) { 
+            err_sys("[vn_handle_http_event] vn_http_request_buffer error");
+        } else if (rv == VN_AGAIN) {
+            continue;
+        } else if (rv == VN_COMPLETED) {
+            request_completed = VN_COMPLETED;
         }
-    }
 
-    /*
-     * If a HTTP request message has not been buffered completely, do nothing.
-     * Otherwise, parse it.
-     */
-    if ((buf_len = vn_http_get_request_len(event->buf, VN_BUFSIZE)) < 0) {
-        err_sys("[vn_serve_http_event] vn_http_get_request_len error");
-    } else if (buf_len > 0) {
-        if (vn_parse_http_request(event->buf, buf_len, &event->hr) < 0) {
-            err_sys("[vn_serve_http_event] vn_parse_http_request error");
+        hr = &event->hr;
+        if (vn_parse_http_line_headers(event->buf, (hr->body.p - event->buf), hr) < 0) {
+            err_sys("[vn_serve_http_event] vn_parse_http_line_headers error");
         }
-    } else {
-        // TODO: logger
-        return; 
+
+        /* Check whether the request body has been fully buffered. */
+        rv = vn_http_body_buffer(event, VN_BUFSIZE);
+        if (rv == VN_MALFORMED) { 
+            err_sys("[vn_handle_http_event] vn_http_body_buffer error");
+        } else if (rv == VN_AGAIN) {
+            continue;
+        } else if (rv == VN_COMPLETED) {
+            body_completed = VN_COMPLETED;
+            break;
+        }
+
+        if (vn_parse_http_body(hr->body.p, hr->body.len, hr) < 0) {
+            err_sys("[vn_serve_http_event] vn_parse_http_body error");
+        }
+
     }
 
-    hr = &event->hr;
+    if (!(request_completed == VN_COMPLETED && body_completed == VN_COMPLETED)) {
+        return;
+    }
 
     // vn_print_http_request(&event->hr);
 
@@ -332,13 +359,22 @@ void vn_handle_get_event(vn_http_event *event) {
 
     /* 
      * If persistent connection flag (Connection: keep-alive) is set,
-     * several connections will share the same buffer, therefore the buffer
-     * should be reset before accepting the next connection.
+     * several connections will share the same buffer, therefore unparsed
+     * data in buffer should be moved to the beginning of buffer.
      */
+    const char *boundary;
+    int remain;
     if (VN_CONN_KEEP_ALIVE == conn_flag) {
-        memset(event->buf, '\0', VN_BUFSIZE);
-        event->bufptr = event->buf;
-        event->remain_size = VN_BUFSIZE;
+        boundary = hr->body.p + hr->body.len;
+        remain = event->bufptr - boundary;
+
+        memmove(event->buf, boundary, remain);
+        memset(event->buf + remain , '\0', VN_BUFSIZE - remain);
+
+        event->bufptr = event->buf + remain;
+        event->remain_size = VN_BUFSIZE - remain;
+
+        /* Reset timer */
         vn_event_add_timer(event, VN_DEFAULT_TIMEOUT);
     } else {
         vn_close_http_event((void *) event);
