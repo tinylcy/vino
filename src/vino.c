@@ -30,17 +30,18 @@ static char *port = VN_PORT;
 
 static const struct option long_options[] = {
     { "port", required_argument, NULL, 'p' },
-    { "help", no_argument, NULL, '?' },
+    { "help", no_argument, NULL, 'h' },
     { "version", no_argument, NULL, 'V' },
     { NULL, 0, NULL, 0 }
 };
 
 static void vn_usage(char *program) {
     fprintf(stderr,
-            "%s [option]...\n"
-            " -p|--port <port>       Specify port for vino. Default 8080.\n"
-            " -?|-h|--help           This information.\n"
-            " -V|--version           Display program version.\n",
+            "Usage: %s [option]\n"
+            "Options are:\n"
+            "    -p|--port <port>   Specify port for Vino. Default 8080.\n"
+            "    -h|--help          This information.\n"
+            "    -V|--version       Display program version.\n",
             program
     );
 }
@@ -326,13 +327,15 @@ void vn_handle_get_event(vn_http_event *event) {
         vn_close_http_event((void *) event);
         return;
     } 
-        // TODO: Check permission
+    
+    // TODO: Check permission
     if ((srcfd = open(filepath, O_RDONLY, 0)) < 0) {
         err_sys("[vn_handle_get_event] open error");
     }
     filesize = vn_get_filesize(filepath);
     /* Map the target file into memory */
     if ((srcp = mmap(NULL, filesize, PROT_READ, MAP_PRIVATE, srcfd, 0)) == MAP_FAILED) {
+        vn_log_warn("mmap error, filepath = %s\n", filepath);
         err_sys("[vn_handle_get_event] mmap error");
     }
     if (close(srcfd) < 0) {
@@ -342,7 +345,7 @@ void vn_handle_get_event(vn_http_event *event) {
     /* Build response header by Connection header */
     vn_get_filetype(filepath, filetype);
     connection = vn_get_http_header(hr, "Connection");
-    if (NULL != connection && !vn_str_cmp(connection, "keep-alive")) {
+    if (NULL != connection && (!vn_str_cmp(connection, "keep-alive") || !vn_str_cmp(connection, "Keep-Alive"))) {
         vn_build_resp_headers(headers, 200, "OK", filetype, filesize, VN_CONN_KEEP_ALIVE);
         conn_flag = VN_CONN_KEEP_ALIVE;
     } else {

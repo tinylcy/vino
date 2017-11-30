@@ -14,7 +14,7 @@ cmake .. && make
 ./vino
 ```
 
-By default the server accepts connections on port 8080, if you want to assign other port for the server, run it as `./vino -p|--port <port>`. For more options,  enter `./vino -h|--help|-?` into terminal.
+By default the server accepts connections on port 8080, if you want to assign other port for the server, run it as `./vino -p|--port <port>`. For more options, please type `./vino -h|--help` into terminal.
 
 ## Features
 
