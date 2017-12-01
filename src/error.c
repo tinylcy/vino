@@ -1,6 +1,8 @@
 /*
- *  Copyright (C) Chenyang Li
- *  Copyright (C) Vino
+ * Copyright (C) Chenyang Li
+ * Copyright (C) Vino
+ *
+ * version 2017/12/01
  */
 #include <stdio.h>
 #include <stdlib.h>
@@ -9,13 +11,13 @@
 
 #include "error.h"
 
-void err_doit(int useerrno, const char *fmt, va_list ap) {
+void err_doit(int use_errno, const char *fmt, va_list ap) {
     int errno_orig;
     char buf[MAXLINE + 1];
 
     errno_orig = errno;
     vsnprintf(buf, MAXLINE, fmt, ap);
-    if (useerrno) {
+    if (use_errno) {
         strncat(buf, ": ", MAXLINE + 1);
         strncat(buf, strerror(errno_orig), MAXLINE + 1);
     }

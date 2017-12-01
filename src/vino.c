@@ -1,6 +1,8 @@
 /*
- *  Copyright (C) Chenyang Li
- *  Copyright (C) Vino
+ * Copyright (C) Chenyang Li
+ * Copyright (C) Vino
+ * 
+ * version 2017/12/01
  */
 #include <stdio.h>
 #include <stdlib.h>
@@ -26,7 +28,7 @@
 #include "util.h"
 #include "error.h"
 
-static char *port = VN_PORT;
+static char *port = VN_PORT;  // 监听端口
 
 static const struct option long_options[] = {
     { "port", required_argument, NULL, 'p' },
@@ -66,7 +68,7 @@ static void vn_parse_options(int argc, char *argv[]) {
 }
 
 int main(int argc, char *argv[]) {
-    int rv, epfd, listenfd;
+    int rv, epollfd, listenfd;
     int i, nready, fd, connfd;
     socklen_t clientlen;
     struct sockaddr_storage clientaddr; 
@@ -79,8 +81,8 @@ int main(int argc, char *argv[]) {
     /* 
      * Install signal handler for SIGPIPE.
      * When a HTTP response contains header `Connection: close`,
-     * the browser will close the socket after receive data, which
-     * will create a SIGPIPE signal to the process.
+     * the browser will close the socket after receive data, 
+     * which will create a SIGPIPE signal to the process.
      */
     vn_signal(SIGPIPE, SIG_IGN);
 
@@ -95,19 +97,18 @@ int main(int argc, char *argv[]) {
 
     vn_epoll_init();
 
-    /* Create an epoll instance referred by `epfd` */
-    if ((epfd = vn_epoll_create()) < 0) {
+    if ((epollfd = vn_epoll_create()) < 0) {
         err_sys("[main] vn_epoll_create error");
     }
 
     if ((http_event = (vn_http_event *) malloc(sizeof(vn_http_event))) == NULL) {
         err_sys("[main] malloc vn_http_event error");
     }
-    vn_init_http_event(http_event, listenfd, epfd);
+    vn_init_http_event(http_event, listenfd, epollfd);
 
-    ep_event.events = EPOLLIN | EPOLLET;
+    ep_event.events   = EPOLLIN | EPOLLET;  /* 对应的文件描述符可读 | 对应的文件描述符有事件发生（边沿触发）*/
     ep_event.data.ptr = (void *) http_event;
-    vn_epoll_add(epfd, listenfd, &ep_event);
+    vn_epoll_add(epollfd, listenfd, &ep_event);
 
     vn_event_timer_init();
     vn_log_info("Timer initialized.");
@@ -117,11 +118,11 @@ int main(int argc, char *argv[]) {
 
     while (VN_RUNNING) {
         time = vn_event_find_timer();
-        nready = vn_epoll_wait(epfd, events, VN_MAXEVENTS, time);
+        nready = vn_epoll_wait(epollfd, events, VN_MAXEVENTS, time);
 
         if (nready < 0) {
             if (errno == EINTR) {
-                continue;   /* Restart if interrupted by signal */
+                continue;  /* Restart if interrupted by signal */
             } else {
                 err_sys("[main] vn_epoll_wait error");
             }
@@ -132,13 +133,13 @@ int main(int argc, char *argv[]) {
 
         /* Deal with returned list of events */
         for (i = 0; i < nready; i++) {
-            vn_http_event *event = (vn_http_event *) events[i].data.ptr;
+            vn_http_event *event = (vn_http_event *)events[i].data.ptr;
             fd = event->fd;
 
             if (listenfd == fd) {
                 while (VN_ACCEPT) {
                     clientlen = sizeof(struct sockaddr_storage);                
-                    connfd = accept(listenfd, (struct sockaddr *) &clientaddr, &clientlen);
+                    connfd = accept(listenfd, (struct sockaddr *)&clientaddr, &clientlen);
                     if (connfd < 0) {
                         if (errno == EAGAIN) {
                             break;  /* All connections have been processed */
@@ -158,35 +159,32 @@ int main(int argc, char *argv[]) {
                         err_sys("[main] malloc vn_http_event error");
                     }
 
-                    vn_init_http_event(new_http_ev, connfd, epfd);
-                    new_ep_ev.events = EPOLLIN | EPOLLET;
+                    vn_init_http_event(new_http_ev, connfd, epollfd);
+
+                    new_ep_ev.events   = EPOLLIN | EPOLLET;
                     new_ep_ev.data.ptr = (void *) new_http_ev;
-                    vn_epoll_add(epfd, connfd, &new_ep_ev);
+                    vn_epoll_add(epollfd, connfd, &new_ep_ev);
 
                     vn_event_add_timer(new_http_ev, VN_DEFAULT_TIMEOUT);
-                    
                 }
-            /* End of fd == listenfd */
-
             } else {
                 vn_handle_http_event(events[i].data.ptr);
             }
         }
     }
 
-
     return 0;
 }
 
-void vn_init_http_event(vn_http_event *event, int fd, int epfd) {
-    event->fd = fd;
-    event->epfd = epfd;
+void vn_init_http_event(vn_http_event *event, int fd, int epollfd) {
+    event->fd          = fd;
+    event->epollfd     = epollfd;
     memset(event->buf, '\0', VN_BUFSIZE);
-    event->bufptr = event->buf;
+    event->bufptr      = event->buf;
     event->remain_size = VN_BUFSIZE;
     vn_init_http_request(&event->hr);
-    event->handler = vn_close_http_event;
-    event->pq_node = NULL;
+    event->handler     = vn_close_http_event;
+    event->pq_node     = NULL;
 }
 
 void vn_handle_http_event(vn_http_event *event) {
@@ -195,7 +193,7 @@ void vn_handle_http_event(vn_http_event *event) {
     vn_http_request *hr;
 
     while ((nread = rio_readn(event->fd, event->bufptr, event->remain_size)) > 0) {
-        event->bufptr += nread;
+        event->bufptr      += nread;
         event->remain_size -= nread;
     }
 
@@ -217,11 +215,13 @@ void vn_handle_http_event(vn_http_event *event) {
      */
     if ((buf_len = vn_http_get_request_len(event->buf, VN_BUFSIZE)) < 0) {
         err_sys("[vn_serve_http_event] vn_http_get_request_len error");
-    } else if (buf_len > 0) {
+    } 
+    else if (buf_len > 0) {
         if (vn_parse_http_request(event->buf, buf_len, &event->hr) < 0) {
             err_sys("[vn_serve_http_event] vn_parse_http_request error");
         }
-    } else {
+    } 
+    else {
         // TODO: logger
         return; 
     }
@@ -232,10 +232,28 @@ void vn_handle_http_event(vn_http_event *event) {
 
     if (!vn_str_cmp(&hr->method, "GET")) {
         vn_handle_get_event(event);
-    } else if (!vn_str_cmp(&hr->method, "POST")) {
+    } 
+    else if (!vn_str_cmp(&hr->method, "HEAD")) {
         // TODO
     }
-
+    else if (!vn_str_cmp(&hr->method, "POST")) {
+        // TODO
+    }
+    else if (!vn_str_cmp(&hr->method, "PUT")) {
+        // TODO
+    }
+    else if (!vn_str_cmp(&hr->method, "DELETE")) {
+        // TODO
+    }
+    else if (!vn_str_cmp(&hr->method, "CONNECT")) {
+        // TODO
+    }
+    else if (!vn_str_cmp(&hr->method, "OPTIONS")) {
+        // TODO
+    }
+    else if (!vn_str_cmp(&hr->method, "TRACE")) {
+        // TODO
+    }
 }
 
 void vn_handle_get_event(vn_http_event *event) {
@@ -271,7 +289,7 @@ void vn_handle_get_event(vn_http_event *event) {
     char headers[VN_HEADERS_SIZE], body[VN_BODY_SIZE];
     int srcfd;
     void *srcp;
-    unsigned int filesize;
+    size_t filesize;
     char filetype[VN_FILETYPE_SIZE];
     vn_str *connection;
     short conn_flag;
@@ -285,7 +303,7 @@ void vn_handle_get_event(vn_http_event *event) {
         vn_close_http_event((void *) event);
         return;
     } 
-        // TODO: Check permission
+    // TODO: Check permission
     if ((srcfd = open(filepath, O_RDONLY, 0)) < 0) {
         err_sys("[vn_handle_get_event] open error");
     }
@@ -323,25 +341,41 @@ void vn_handle_get_event(vn_http_event *event) {
      */
     if (VN_CONN_KEEP_ALIVE == conn_flag) {
         memset(event->buf, '\0', VN_BUFSIZE);
-        event->bufptr = event->buf;
+        event->bufptr      = event->buf;
         event->remain_size = VN_BUFSIZE;
         vn_event_add_timer(event, VN_DEFAULT_TIMEOUT);
     } else {
         vn_close_http_event((void *) event);
     }
-
 }
 
+void vn_handle_head_event(vn_http_event *event) {}
+
+void vn_handle_post_event(vn_http_event *event) {}
+
+void vn_handle_put_event(vn_http_event *event) {}
+
+void vn_handle_delete_event(vn_http_event *event) {}
+
+void vn_handle_connect_event(vn_http_event *event) {}
+
+void vn_handle_options_event(vn_http_event *event) {}
+
+void vn_handle_trace_event(vn_http_event *event) {}
+
 void vn_close_http_event(void *event) {
-    vn_http_event *ev = (vn_http_event *) event;
+    vn_http_event *ev = (vn_http_event *)event;
     if (close(ev->fd) < 0) {
         err_sys("[vn_close_http_event] close error");
     }
     free(ev);
 }
 
-void vn_build_resp_headers(char *headers, int code, const char *reason, const char *content_type, 
-                            unsigned int content_length, short keep_alive) {
+void vn_build_resp_headers(char *headers, 
+                           int code, const char *reason, 
+                           const char *content_type, 
+                           size_t content_length, 
+                           short keep_alive) {
     char *conn;
     if (NULL == reason) {
         reason = vn_status_message(code);
@@ -370,19 +404,26 @@ const char *vn_status_message(int code) {
     const char *msg = NULL;
     switch (code) {
         case 200:
-            msg = "OK";                    break;
+            msg = "OK";                    
+            break;
         case 400:
-            msg = "Bad Request";           break;
+            msg = "Bad Request";           
+            break;
         case 401:
-            msg = "Unauthorized";          break;
+            msg = "Unauthorized";          
+            break;
         case 403:
-            msg = "Forbidden";             break;
+            msg = "Forbidden";             
+            break;
         case 404:
-            msg = "Not Found";             break;
+            msg = "Not Found";             
+            break;
         case 500:
-            msg = "Internal Server Error"; break;
+            msg = "Internal Server Error"; 
+            break;
         case 503:
-            msg = "Service Unavailable";   break;
+            msg = "Service Unavailable";   
+            break;
         default:
             msg = "OK";
     }

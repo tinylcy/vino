@@ -1,6 +1,8 @@
 /*
- *  Copyright (C) Chenyang Li
- *  Copyright (C) Vino
+ * Copyright (C) Chenyang Li
+ * Copyright (C) Vino
+ *
+ * version 2017/12/01
  */
 #ifndef VINO_VN_PRIORITY_QUEUE_H
 #define VINO_VN_PRIORITY_QUEUE_H
@@ -17,9 +19,9 @@ typedef unsigned long vn_msec_t;   /* Milliseconds */
  * Priority queue node structure.
  */
 typedef struct vn_priority_queue_node_s {
-    vn_msec_t          key;      /* Comparable key to determine priority */
-    void               *data;    /* Data */
-    unsigned short     deleted;  /* 1-Yes | 0-No */
+    vn_msec_t      key;      /* Comparable key to determine priority */
+    void           *data;    /* Data */
+    unsigned short deleted;  /* 1-Yes | 0-No */
 } vn_priority_queue_node;
 
 /* 
@@ -27,13 +29,13 @@ typedef struct vn_priority_queue_node_s {
  * 
  * The parent of the node in position k is in position k/2 and,
  * conversely, the two children of the node in the position k
- * are in positions 2k and 2k + 1.
+ * are in position 2k and 2k + 1.
  * 
  * TODO: Dynamic enlarge `nodes` memory space.
  */
 typedef struct vn_priority_queue_s {
     vn_priority_queue_node **nodes;    /* An array `nodes` stores all points of node */
-    unsigned int           size;       /* The number of nodes in priority queue */
+    size_t                 size;       /* The number of nodes in priority queue */
 } vn_priority_queue;
 
 /*
@@ -69,6 +71,6 @@ int vn_pq_isempty(vn_priority_queue *pq);
 /*
  * Number of nodes in the priority queue.
  */ 
-unsigned int vn_pq_size(vn_priority_queue *pq);
+size_t vn_pq_size(vn_priority_queue *pq);
 
 #endif /* VINO_VN_PRIORITY_QUEUE_H */

@@ -1,6 +1,8 @@
 /*
- *  Copyright (C) Chenyang Li
- *  Copyright (C) Vino
+ * Copyright (C) Chenyang Li
+ * Copyright (C) Vino
+ *
+ * version 2017/12/01
  */
 #ifndef VINO_VN_EVENT_TIMER_H
 #define VINO_VN_EVENT_TIMER_H
@@ -9,10 +11,10 @@
 #include "vn_request.h"
 #include "vn_priority_queue.h"
 
-#define VN_DEFAULT_TIMEOUT  500    /* ms */
+#define VN_DEFAULT_TIMEOUT   500    /* ms */
 
-typedef time_t        vn_sec_t;    /* Seconds */
-typedef unsigned long vn_msec_t;   /* Milliseconds */
+typedef time_t        vn_sec_t;     /* Seconds */
+typedef unsigned long vn_msec_t;    /* Milliseconds */
 
 volatile vn_msec_t vn_current_msec;
 

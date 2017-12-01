@@ -1,6 +1,8 @@
 /*
- *  Copyright (C) Chenyang Li
- *  Copyright (C) Vino
+ * Copyright (C) Chenyang Li
+ * Copyright (C) Vino
+ *
+ * version 2017/12/01
  */
 #ifndef VINO_ERROR_H
 #define VINO_ERROR_H

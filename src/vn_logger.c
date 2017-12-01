@@ -25,11 +25,21 @@ static void vn_log_format(char *tag, const char *fmt, va_list ap) {
     printf("\n"); 
 }
 
-void vn_log_error(const char *fmt, ...) {
+void vn_log_debug(const char *fmt, ...) {
+    // 定义VA_LIST变量，用于获取不确定个数的参数
+    va_list ap;
+    // 初始化VA_LIST变量
+    va_start(ap, fmt);
+    vn_log_format(VN_DEBUG, fmt, ap);
+    // 结束可变参数的获取
+    va_end(ap);    
+}
+
+void vn_log_info(const char *fmt, ...) {
     va_list ap;
     va_start(ap, fmt);
-    vn_log_format(VN_ERROR, fmt, ap);
-    va_end(ap);
+    vn_log_format(VN_INFO, fmt, ap);
+    va_end(ap);    
 }
 
 void vn_log_warn(const char *fmt, ...) {
@@ -39,9 +49,16 @@ void vn_log_warn(const char *fmt, ...) {
     va_end(ap);
 }
 
-void vn_log_info(const char *fmt, ...) {
+void vn_log_error(const char *fmt, ...) {
     va_list ap;
     va_start(ap, fmt);
-    vn_log_format(VN_INFO, fmt, ap);
-    va_end(ap);    
+    vn_log_format(VN_ERROR, fmt, ap);
+    va_end(ap);
+}
+
+void vn_log_fatal(const char *fmt, ...) {
+    va_list ap;
+    va_start(ap, fmt);
+    vn_log_format(VN_FATAL, fmt, ap);
+    va_end(ap);
 }

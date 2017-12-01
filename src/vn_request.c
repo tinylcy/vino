@@ -1,6 +1,8 @@
 /*
- *  Copyright (C) Chenyang Li
- *  Copyright (C) Vino
+ * Copyright (C) Chenyang Li
+ * Copyright (C) Vino
+ *
+ * version 2017/12/01
  */
 #include <stdio.h>
 #include <stdlib.h>
@@ -11,8 +13,7 @@
 #include "util.h"
 #include "error.h"
 
-const char *vn_skip(const char *s, const char *end, const char *delims,
-                         vn_str *vs) {
+const char *vn_skip(const char *s, const char *end, const char *delims, vn_str *vs) {
     vs->p = s;
     while (s < end && strchr(delims, *s) == NULL) { s++; }
     vs->len = s - vs->p;
@@ -21,10 +22,8 @@ const char *vn_skip(const char *s, const char *end, const char *delims,
 }
 
 void vn_init_http_request(vn_http_request *hr) {
-    hr->method.p = hr->uri.p = hr->proto.p = NULL;
-    hr->method.len = hr->uri.len = hr->proto.len = 0;
-    hr->query_string.p = NULL;
-    hr->query_string.len = 0;
+    hr->method.p   = hr->proto.p   = hr->uri.p   = hr->query_string.p   = NULL;
+    hr->method.len = hr->proto.len = hr->uri.len = hr->query_string.len = 0;
     hr->header_cnt = 0;
 }
 
@@ -89,8 +88,8 @@ int vn_parse_http_headers(const char *buf, int buf_len, vn_http_request *hr) {
             continue;
         }
 
-        if (name->len > 0 && value -> len == 0) {
-            name->p = value->p = NULL;
+        if (name->len == 0 && value ->len == 0) {
+            name->p   = value->p   = NULL;
             name->len = value->len = 0;
         }
 
@@ -125,20 +124,20 @@ void vn_print_http_request(vn_http_request *hr) {
     }
     printf("\nMethod: %s\n", value);
 
-    if (vn_get_string(&hr->uri, value, VN_MAX_HTTP_HEADER_VALUE) < 0) {
-        err_sys("[print_http_request] vn_get_string [uri] error");
-    }
-    printf("URI: %s\n", value);
-
     if (vn_get_string(&hr->proto, value, VN_MAX_HTTP_HEADER_VALUE) < 0) {
         err_sys("[print_http_request] vn_get_string [proto] error");
     }
     printf("Proto: %s\n", value);
 
+    if (vn_get_string(&hr->uri, value, VN_MAX_HTTP_HEADER_VALUE) < 0) {
+        err_sys("[print_http_request] vn_get_string [uri] error");
+    }
+    printf("URI: %s\n", value);
+
     if (vn_get_string(&hr->query_string, value, VN_MAX_HTTP_HEADER_VALUE) < 0) {
         err_sys("[print_http_request] vn_get_string [query_string] error");
     }
-    printf("Query-String: %s\n", value);
+    printf("Query-String: %s\n\n", value);
 
     for (i = 0; i < hr->header_cnt; i++) {
         if (vn_get_string(&hr->header_names[i], name, VN_MAX_HTTP_HEADER_NAME) < 0 ||

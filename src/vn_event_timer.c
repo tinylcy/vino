@@ -1,6 +1,8 @@
 /*
- *  Copyright (C) Chenyang Li
- *  Copyright (C) Vino
+ * Copyright (C) Chenyang Li
+ * Copyright (C) Vino
+ *
+ * version 2017/12/01
  */
 #include <stdlib.h>
 #include <sys/time.h>
@@ -19,13 +21,14 @@ int vn_event_timer_init(void) {
 
 void vn_time_update(void) {
     struct timeval tv;
-    vn_sec_t sec;
-    vn_msec_t msec;
+    vn_sec_t       sec;
+    vn_msec_t      msec;
 
+    // 获取当前精确时间
     if (gettimeofday(&tv, NULL) < 0) {
         err_sys("[vn_time_update] gettimeofday error");
     }
-    sec = tv.tv_sec;
+    sec  = tv.tv_sec;
     msec = tv.tv_usec / 1000;
 
     vn_current_msec = sec * 1000 + msec;
@@ -60,11 +63,11 @@ void vn_event_expire_timers(void) {
          * If node.key < vn_current_msec, timeout.
          * Be careful, the gap should be cast to Long type.
          */
-        if ((long) (node->key - vn_current_msec) > 0) {
+        if ((long)(node->key - vn_current_msec) > 0) {
             return;
         }
 
-        event = (vn_http_event *) node->data;
+        event = (vn_http_event *)node->data;
     
         if (event->handler) {
             (*event->handler)(event);
@@ -81,8 +84,8 @@ void vn_event_add_timer(vn_http_event *event, vn_msec_t timer) {
         err_sys("[vn_event_add_timer] malloc error");
     }
     key = vn_current_msec + timer;
-    node->key = key;
-    node->data = (void *) event;
+    node->key     = key;
+    node->data    = (void *) event;
     node->deleted = VN_PQ_NOT_DELETED;
     vn_pq_insert(&pq, node);
 
