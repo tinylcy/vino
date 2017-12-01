@@ -39,6 +39,16 @@ void vn_linked_list_append(vn_linked_list *list, void *data) {
 
 void vn_linked_list_free(vn_linked_list *list) {
     vn_linked_list_node *current, *current_prev;
+    
+    if (vn_linked_list_isempty(list)) {
+        return;
+    }
+    
+    current = list->head;
+    while (current) {
+        free(current->data);
+        current = current->next;
+    }
 
     current = list->tail;
     current_prev = current->prev;

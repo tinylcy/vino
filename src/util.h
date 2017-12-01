@@ -14,7 +14,6 @@
 #define CR  '\r'
 #define LF  '\n'
 
-
 /* Self-defined string structure */
 typedef struct vn_str_s {
     const char    *p;         /* String pointer */
@@ -50,6 +49,16 @@ int vn_str_cmp(const vn_str *str1, const char *str2);
  * Convert a self-defined string pointed by `str` to int.
  */ 
 int vn_str_atoi(const vn_str *str);
+
+/*
+ * Fetch substring from `s` to `end` into `vs`.
+ * 
+ * Skip initial delimiters characters. Record the first non-delimiter
+ * character at the beginning of `vs`. Then scan the rest of the string 
+ * until a delimiter character or end-of-string is found.
+ */
+const char *vn_skip(const char *s, const char *end,
+                        const char *delims, vn_str *vs);
 
 /* 
  * Set the O_NONBLOCK flag on the descriptor.

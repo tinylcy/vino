@@ -88,6 +88,15 @@ void vn_check_null(int num, ...) {
     va_end(ap);
 }
 
+const char *vn_skip(const char *s, const char *end, const char *delims,
+                         vn_str *vs) {
+    vs->p = s;
+    while (s < end && strchr(delims, *s) == NULL) { s++; }
+    vs->len = s - vs->p;
+    while (s < end && strchr(delims, *s) != NULL) { s++; } 
+    return s;                    
+}
+
 int make_socket_non_blocking(int sockfd) {
     int flags;
 

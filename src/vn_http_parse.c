@@ -2,9 +2,13 @@
  *  Copyright (C) Chenyang Li
  *  Copyright (C) Vino
  */
-#include "vn_request.h"
-#include "vn_http_parse.h"
+#include <stdlib.h>
 
+#include "vn_http_parse.h"
+#include "vn_request.h"
+#include "vn_linked_list.h"
+#include "util.h"
+#include "error.h"
 
 int vn_http_parse_request_line(vn_http_request *hr, const char *buf) {
     const char *p;
@@ -214,6 +218,7 @@ int vn_http_parse_request_line(vn_http_request *hr, const char *buf) {
 int vn_http_parse_header_line(vn_http_request *hr, const char *buf) {
     const char *p;
     char ch;
+    vn_str *name_str, *value_str;
 
     enum {
         sw_start = 0,
@@ -284,11 +289,19 @@ int vn_http_parse_header_line(vn_http_request *hr, const char *buf) {
         case sw_almost_done:
             switch (ch) {
             case '\n':
-                hr->header_names[hr->header_cnt].p = hr->header_name_start;
-                hr->header_names[hr->header_cnt].len = hr->header_name_len;
-                hr->header_values[hr->header_cnt].p = hr->header_value_start;
-                hr->header_values[hr->header_cnt].len = hr->header_value_len;
                 hr->header_cnt += 1;
+
+                if ((name_str = (vn_str *) malloc(sizeof(vn_str))) == NULL ||
+                    (value_str = (vn_str *) malloc(sizeof(vn_str))) == NULL) {
+                    err_sys("[vn_http_parse_header_line] malloc error");
+                }
+                name_str->p = hr->header_name_start;
+                name_str->len = hr->header_name_len;
+                value_str->p = hr->header_value_start;
+                value_str->len = hr->header_value_len;
+                
+                vn_linked_list_append(&hr->header_name_list, name_str);
+                vn_linked_list_append(&hr->header_value_list, value_str);
 
                 hr->header_name_start = hr->header_value_start = NULL;
                 hr->header_name_len = hr->header_value_len = 0;

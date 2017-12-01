@@ -21,6 +21,7 @@
 #include "socketlib.h"
 #include "vn_request.h"
 #include "vn_epoll.h"
+#include "vn_linked_list.h"
 #include "vn_http_parse.h"
 #include "vn_event_timer.h"
 #include "vn_logger.h"
@@ -80,6 +81,8 @@ static void vn_sig_usr1_handler(int signum) {
     vn_log_info("Exiting on SIGUSR1...");
     exit(0);
 }
+
+static void vn_print_http_request(vn_http_request *hr);
 
 int main(int argc, char *argv[]) {
     int rv, epfd, listenfd;
@@ -175,6 +178,7 @@ int main(int argc, char *argv[]) {
                     }
 
                     vn_http_event *new_http_ev;
+                    vn_http_request *new_hr;
                     struct epoll_event new_ep_ev;
 
                     if ((new_http_ev = (vn_http_event *) malloc(sizeof(vn_http_event))) == NULL) {
@@ -200,24 +204,12 @@ int main(int argc, char *argv[]) {
     return 0;
 }
 
-void vn_init_http_event(vn_http_event *event, int fd, int epfd) {
-    event->fd = fd;
-    event->epfd = epfd;
-    memset(event->buf, '\0', VN_BUFSIZE);
-    event->bufptr = event->buf;
-    event->remain_size = VN_BUFSIZE;
-    vn_init_http_request(&event->hr);
-    event->hr.pos = event->buf;
-    event->handler = vn_close_http_event;
-    event->pq_node = NULL;
-}
-
 void vn_handle_http_event(vn_http_event *event) {
     int nread, buf_len;
     int rv, req_line_completed, req_headers_completed;
 
     while (VN_KEEP_READING) {
-        nread = rio_readn(event->fd, event->bufptr, event->remain_size);
+        nread = read(event->fd, event->bufptr, event->remain_size);
 
         /* End of file, the remote has closed the connection. */
         if (0 == nread) {
@@ -383,14 +375,6 @@ void vn_handle_get_event(vn_http_event *event) {
 
 }
 
-void vn_close_http_event(void *event) {
-    vn_http_event *ev = (vn_http_event *) event;
-    if (close(ev->fd) < 0) {
-        err_sys("[vn_close_http_event] close error");
-    }
-    free(ev);
-}
-
 void vn_build_resp_headers(char *headers, int code, const char *reason, const char *content_type, 
                             unsigned int content_length, short keep_alive) {
     char *conn;
@@ -438,4 +422,51 @@ const char *vn_status_message(int code) {
             msg = "OK";
     }
     return msg;
+}
+
+static void vn_print_http_request(vn_http_request *hr) {
+    int i;
+    char name[VN_MAX_HTTP_HEADER_NAME], value[VN_MAX_HTTP_HEADER_VALUE];
+    vn_linked_list_node *name_node, *value_node;
+    vn_str *name_str, *value_str;
+
+    if (vn_get_string(&hr->method, value, VN_MAX_HTTP_HEADER_VALUE) < 0) {
+        err_sys("[print_http_request] vn_get_string [method] error");
+    }
+    printf("\nMethod: %s\n", value);
+
+    if (vn_get_string(&hr->uri, value, VN_MAX_HTTP_HEADER_VALUE) < 0) {
+        err_sys("[print_http_request] vn_get_string [uri] error");
+    }
+    printf("URI: %s\n", value);
+
+    if (vn_get_string(&hr->proto, value, VN_MAX_HTTP_HEADER_VALUE) < 0) {
+        err_sys("[print_http_request] vn_get_string [proto] error");
+    }
+    printf("Proto: %s\n", value);
+
+    if (vn_get_string(&hr->query_string, value, VN_MAX_HTTP_HEADER_VALUE) < 0) {
+        err_sys("[print_http_request] vn_get_string [query_string] error");
+    }
+    printf("Query-String: %s\n", value);
+
+    name_node = hr->header_name_list.head;
+    value_node = hr->header_value_list.head;
+    while (name_node && value_node) {
+        name_str = (vn_str *) name_node->data;
+        value_str = (vn_str *) value_node->data;
+        if (vn_get_string(name_str, name, VN_MAX_HTTP_HEADER_NAME) < 0 ||
+            vn_get_string(value_str, value, VN_MAX_HTTP_HEADER_VALUE) < 0) {
+            err_sys("[print_http_request] vn_get_string [header] error");
+        }
+        printf("| %s | %s |\n", name, value);  
+        name_node = name_node->next;
+        value_node = value_node->next;      
+    }
+
+    // if (hr->body.len > 0 && vn_get_string(&hr->body, value, VN_MAX_HTTP_HEADER_VALUE) < 0) {
+    //     err_sys("[print_http_request] vn_get_string [body] error");
+    // }
+    // printf("\nBody:\n%s", value);
+
 }

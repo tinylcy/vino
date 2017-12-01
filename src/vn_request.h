@@ -7,6 +7,7 @@
 
 #include <stdio.h>
 #include "vn_priority_queue.h"
+#include "vn_linked_list.h"
 #include "util.h"
 
 #define VN_BUFSIZE                8192
@@ -36,8 +37,8 @@ typedef struct vn_http_request_s {
     unsigned short header_cnt;
     const char     *header_name_start, *header_value_start;
     int            header_name_len, header_value_len;
-    vn_str         header_names[VN_MAX_HTTP_HEADERS];
-    vn_str         header_values[VN_MAX_HTTP_HEADERS];
+    vn_linked_list header_name_list;
+    vn_linked_list header_value_list;
 
     /* HTTP body */
     vn_str         body;
@@ -59,19 +60,14 @@ typedef struct vn_http_event_s {
 } vn_http_event;
 
 /*
- * Fetch substring from `s` to `end` into `vs`.
- * 
- * Skip initial delimiters characters. Record the first non-delimiter
- * character at the beginning of `vs`. Then scan the rest of the string 
- * until a delimiter character or end-of-string is found.
- */
-const char *vn_skip(const char *s, const char *end,
-                        const char *delims, vn_str *vs);
-
-/*
  * Initialize HTTP request message.
  */
 void vn_init_http_request(vn_http_request *hr);       
+
+/*
+ * Initialize HTTP request event.
+ */ 
+void vn_init_http_event(vn_http_event *event, int fd, int epfd);
 
 /*
  * Search and return the header `name` in parsed HTTP request
@@ -82,8 +78,9 @@ void vn_init_http_request(vn_http_request *hr);
 vn_str *vn_get_http_header(vn_http_request *hr, const char *name);
 
 /*
- * Print HTTP request message.
+ * Close the connection, don't forget to cast the
+ * type of `event` to (vn_http_event *).
  */
-void vn_print_http_request(vn_http_request *hr);
+void vn_close_http_event(void *event);
 
 #endif /* VINO_VN_REQUEST_H */

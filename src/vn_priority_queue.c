@@ -6,7 +6,6 @@
 #include <time.h>
 
 #include "vn_priority_queue.h"
-#include "vino.h"
 #include "error.h"
 
 static int vn_less(vn_priority_queue *pq, int i, int j) {
