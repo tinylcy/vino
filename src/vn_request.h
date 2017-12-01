@@ -14,12 +14,12 @@
 #define VN_MAX_HTTP_HEADER_NAME   50
 #define VN_MAX_HTTP_HEADER_VALUE  200
 
-#define VN_COMPLETED      0
-#define VN_AGAIN          1
-#define VN_MALFORMED     -1
-
 /* HTTP request message */
 typedef struct vn_http_request_s {
+
+    unsigned int state;
+    const char *pos;
+
     /* HTTP request line */
     vn_str method;  /* "GET" */
     vn_str uri;     /* "/index.html" */
@@ -32,8 +32,10 @@ typedef struct vn_http_request_s {
      */
     vn_str         query_string;
 
-    /* HTTP request Headers */
+    /* HTTP request headers */
     unsigned short header_cnt;
+    const char     *header_name_start, *header_value_start;
+    int            header_name_len, header_value_len;
     vn_str         header_names[VN_MAX_HTTP_HEADERS];
     vn_str         header_values[VN_MAX_HTTP_HEADERS];
 
@@ -69,49 +71,7 @@ const char *vn_skip(const char *s, const char *end,
 /*
  * Initialize HTTP request message.
  */
-void vn_init_http_request(vn_http_request *hr);
-
-/*
- * Check whether the request line and headers is fully buffered.
- * 
- * VN_COMPLETED - Actual buffered request length, include last \r\n\r\n 
- * VN_AGAIN     - If request hasn't been fully buffered
- * VN_MALFORMED - If request is malformed
- */
-int vn_http_line_headers_buffer(vn_http_event *event, size_t buf_len);
-
-/*
- * Check whether the body is fully buffered.
- * 
- * VN_COMPLETED - Actual buffered body length 
- * VN_AGAIN     - If body is hasn't been fully buffered
- * VN_MALFORMED - If body is malformed
- */
-int vn_http_body_buffer(vn_http_event *event, size_t buf_len);           
-
-/* 
- * Parse a HTTP request line and headers.
- * 
- * 0  - If parse success
- * <0 - If parse failed
- */
-int vn_parse_http_line_headers(const char *buf, int buf_len, vn_http_request *hr);
-
-/*
- * Parse HTTP request headers.
- * 
- * 0  - If parse success
- * <0 - If parse failed
- */ 
-int vn_parse_http_headers(const char *buf, int buf_len, vn_http_request *hr);
-
-/*
- * Parse HTTP body.
- * 
- * 0  - If parse success
- * <0 - If parse failed
- */ 
-int vn_parse_http_body(const char *buf, int buf_len, vn_http_request *hr);
+void vn_init_http_request(vn_http_request *hr);       
 
 /*
  * Search and return the header `name` in parsed HTTP request

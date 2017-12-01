@@ -21,6 +21,11 @@ int vn_get_string(vn_str *str, char *buf, size_t buf_len) {
     unsigned int i;
 
     memset(buf, '\0', buf_len);
+
+    if(!str->len) {
+        return 0;
+    }
+
     if (str->len + 1 > buf_len) {
         return -1;
     }

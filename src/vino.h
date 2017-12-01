@@ -12,6 +12,7 @@
 #define VN_RUNNING        1
 #define VN_ACCEPT         1
 #define VN_KEEP_READING   1
+#define VN_KEEP_PARSING   1
 
 #define VN_HEADERS_SIZE              4096
 #define VN_BODY_SIZE                 8192
