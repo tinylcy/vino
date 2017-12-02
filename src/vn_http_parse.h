@@ -15,10 +15,11 @@
 
 #define VN_HTTP_PARSE_INVALID_METHOD    -1
 #define VN_HTTP_PARSE_INVALID_REQUEST   -2
-#define VN_HTTP_PARSE_INVALID_VERSION   -3
+#define VN_HTTP_PARSE_INVALID_URI       -3
+#define VN_HTTP_PARSE_INVALID_VERSION   -4
 
 #define VN_HTTP_PARSE_HEADER_DONE        2
-#define VN_HTTP_PARSE_INVALID_HEADER    -4
+#define VN_HTTP_PARSE_INVALID_HEADER    -5
 
 int vn_http_parse_request_line(vn_http_request *hr, const char *buf);
 

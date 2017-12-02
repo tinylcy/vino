@@ -20,6 +20,7 @@ typedef struct vn_http_request_s {
 
     unsigned int state;
     const char *pos;
+    const char *last;
 
     /* HTTP request line */
     vn_str method;  /* "GET" */
@@ -68,6 +69,11 @@ void vn_init_http_request(vn_http_request *hr);
  * Initialize HTTP request event.
  */ 
 void vn_init_http_event(vn_http_event *event, int fd, int epfd);
+
+/*
+ * Reset HTTP request event. 
+ */ 
+void vn_reset_http_event(vn_http_event *event);
 
 /*
  * Search and return the header `name` in parsed HTTP request

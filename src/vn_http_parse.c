@@ -10,8 +10,14 @@
 #include "util.h"
 #include "error.h"
 
+#define vn_str3_cmp(m, c0, c1, c2, c3)                                \
+    *((unsigned int *) m) == ((c3 << 24) | (c2 << 16) | (c1 << 8) | c0)
+
+#define vn_str4_cmp(m, c0, c1, c2, c3)                                \
+    *((unsigned int *) m) == ((c3 << 24) | (c2 << 16) | (c1 << 8) | c0)
+
 int vn_http_parse_request_line(vn_http_request *hr, const char *buf) {
-    const char *p;
+    const char *p, *m;
     char ch;
 
     enum {
@@ -37,14 +43,14 @@ int vn_http_parse_request_line(vn_http_request *hr, const char *buf) {
 
     state = hr->state;
 
-    for (p = hr->pos; *p != '\0'; p++, hr->pos++) {
+    for (p = hr->pos; p < hr->last; p++, hr->pos++) {
         ch = *p;
 
         switch (state) {
 
         /* HTTP method: GET, POST */
         case sw_start:
-            if (ch == '\r' || ch == '\n') {
+            if (ch == CR || ch == LF) {
                 break;
             }
             if (ch < 'A' || ch > 'Z') {
@@ -57,8 +63,19 @@ int vn_http_parse_request_line(vn_http_request *hr, const char *buf) {
         case sw_method:
             if (ch == ' ') {
                 hr->method.len = p - hr->method.p;
+                m = hr->method.p;
 
-                // TODO: Fetch method
+                switch (p - m) {
+                case 3:
+                    if (!vn_str3_cmp(m, 'G', 'E', 'T', ' ')) {
+                        return VN_HTTP_PARSE_INVALID_METHOD;
+                    }
+                case 4:
+                    if (!vn_str4_cmp(m, 'P', 'O', 'S', 'T')) {
+                        return VN_HTTP_PARSE_INVALID_METHOD;
+                    }
+                }
+                
                 state = sw_space_before_uri;
                 break;
             }
@@ -88,6 +105,8 @@ int vn_http_parse_request_line(vn_http_request *hr, const char *buf) {
                 hr->uri.len = p - hr->uri.p;
                 state = sw_question_mark_before_query_string;
                 break;
+            case '\0':
+                return VN_HTTP_PARSE_INVALID_URI;
             default:
                 state = sw_uri;
                 break;
@@ -104,6 +123,8 @@ int vn_http_parse_request_line(vn_http_request *hr, const char *buf) {
                 hr->uri.len = p - hr->uri.p;
                 state = sw_question_mark_before_query_string;
                 break;
+            case '\0':
+                return VN_HTTP_PARSE_INVALID_URI;
             default:
                 state = sw_uri;
                 break;
@@ -233,16 +254,18 @@ int vn_http_parse_header_line(vn_http_request *hr, const char *buf) {
 
     state = sw_start;
 
-    for (p = hr->pos; *p != '\0'; p++, hr->pos++) {
+    for (p = hr->pos; p < hr->last; p++, hr->pos++) {
         ch = *p;
 
         switch (state) {
 
         case sw_start:
             switch (ch) {
-            case '\r':
+            case CR:
                 state = sw_headers_almost_done;
                 break;
+            case '\0':
+                return VN_HTTP_PARSE_INVALID_HEADER;
             default:
                 hr->header_name_start = p;
                 state = sw_name;
@@ -255,6 +278,11 @@ int vn_http_parse_header_line(vn_http_request *hr, const char *buf) {
             case ':':
                 hr->header_name_len = p - hr->header_name_start;
                 state = sw_colon_after_name;
+                break;
+            case '\0':
+                return VN_HTTP_PARSE_INVALID_HEADER;
+            case CR:
+                state = sw_almost_done;
                 break;
             default:
                 state = sw_name;
@@ -270,16 +298,48 @@ int vn_http_parse_header_line(vn_http_request *hr, const char *buf) {
             break;
         
         case sw_space_before_value:
-            hr->header_value_start = p;
-            state = sw_value;
+            switch (ch) {
+            case ' ':
+                break;
+            case CR:
+                state = sw_almost_done;
+                break;
+            case '\0':
+                return VN_HTTP_PARSE_INVALID_HEADER;
+            default:
+                hr->header_value_start = p;
+                state = sw_value;
+                break;
+            }
             break;
 
         case sw_value:
             switch (ch) {
-            case '\r':
+            case CR:
                 hr->header_value_len = p - hr->header_value_start;
                 state = sw_almost_done;
                 break;
+            case ' ':
+                hr->header_value_len = p - hr->header_value_start;
+                state = sw_space_after_value;
+                break;
+            case '\0':
+                return VN_HTTP_PARSE_INVALID_HEADER;
+            default:
+                state = sw_value;
+                break;
+            }
+            break;
+
+        case sw_space_after_value:
+            switch (ch) {
+            case ' ':
+                break;
+            case CR:
+                state = sw_almost_done;
+                break;
+            case '\0':
+                return VN_HTTP_PARSE_INVALID_HEADER;
             default:
                 state = sw_value;
                 break;
@@ -288,7 +348,7 @@ int vn_http_parse_header_line(vn_http_request *hr, const char *buf) {
         
         case sw_almost_done:
             switch (ch) {
-            case '\n':
+            case LF:
                 hr->header_cnt += 1;
 
                 if ((name_str = (vn_str *) malloc(sizeof(vn_str))) == NULL ||
@@ -316,9 +376,10 @@ int vn_http_parse_header_line(vn_http_request *hr, const char *buf) {
             break;
 
         case sw_headers_almost_done:
-            if (ch != '\n') {
+            if (ch != LF) {
                 return VN_HTTP_PARSE_INVALID_HEADER;
             }
+            hr->state = sw_start;
             hr->pos += 1;
             return VN_OK;
         }

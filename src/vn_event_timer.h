@@ -20,7 +20,7 @@ vn_priority_queue pq;
 
 int vn_event_timer_init(void);
 
-void vn_time_update(void);
+void vn_event_time_update(void);
 
 vn_msec_t vn_event_find_timer(void);
 

@@ -153,7 +153,7 @@ int main(int argc, char *argv[]) {
             }
         }
 
-        vn_time_update();
+        vn_event_time_update();
         vn_event_expire_timers();
 
         /* Deal with returned list of events */
@@ -178,7 +178,6 @@ int main(int argc, char *argv[]) {
                     }
 
                     vn_http_event *new_http_ev;
-                    vn_http_request *new_hr;
                     struct epoll_event new_ep_ev;
 
                     if ((new_http_ev = (vn_http_event *) malloc(sizeof(vn_http_event))) == NULL) {
@@ -225,6 +224,7 @@ void vn_handle_http_event(vn_http_event *event) {
         }
 
         event->bufptr += nread;
+        event->hr.last += nread;     /* Update the last character parser can read */
         event->remain_size -= nread;
 
         rv = vn_http_parse_request_line(&event->hr, event->buf);
@@ -355,20 +355,11 @@ void vn_handle_get_event(vn_http_event *event) {
      * several connections will share the same buffer, therefore unparsed
      * data in buffer should be moved to the beginning of buffer.
      */
-    // const char *boundary;
-    // int remain;
     if (VN_CONN_KEEP_ALIVE == conn_flag) {
-        // boundary = hr->body.p + hr->body.len;
-        // remain = event->bufptr - boundary;
-
-        // memmove(event->buf, boundary, remain);
-        // memset(event->buf + remain , '\0', VN_BUFSIZE - remain);
-
-        // event->bufptr = event->buf + remain;
-        // event->remain_size = VN_BUFSIZE - remain;
-
-        /* Reset timer */
+        /* Restart timer */
         vn_event_add_timer(event, VN_DEFAULT_TIMEOUT);
+        /* Reset HTTP event */
+        vn_reset_http_event(event);
     } else {
         vn_close_http_event((void *) event);
     }

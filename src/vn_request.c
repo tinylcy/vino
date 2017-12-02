@@ -16,6 +16,7 @@
 void vn_init_http_request(vn_http_request *hr) {
     /* Initialize HTTP parser (DFA) state */
     hr->state = 0;
+    hr->pos = hr->last = NULL;
 
     /* Initialize HTTP request line */
     hr->method.p = hr->uri.p = hr->proto.p = NULL;
@@ -34,13 +35,31 @@ void vn_init_http_request(vn_http_request *hr) {
 void vn_init_http_event(vn_http_event *event, int fd, int epfd) {
     event->fd = fd;
     event->epfd = epfd;
+
+    /* Initialize buffer */
     memset(event->buf, '\0', VN_BUFSIZE);
     event->bufptr = event->buf;
     event->remain_size = VN_BUFSIZE;
+
     vn_init_http_request(&event->hr);
-    event->hr.pos = event->buf;
+    /* Initialize HTTP request parser state */
+    event->hr.pos = event->hr.last = event->buf;
+
     event->handler = vn_close_http_event;
     event->pq_node = NULL;
+}
+
+void vn_reset_http_event(vn_http_event *event) {
+    /* Reset buffer */
+    memset(event->buf, '\0', VN_BUFSIZE);
+    event->bufptr = event->buf;
+    event->remain_size = VN_BUFSIZE;
+
+    vn_init_http_request(&event->hr);
+    /* Reset HTTP request parser state */
+    event->hr.pos = event->hr.last = event->buf;
+
+    event->handler = vn_close_http_event;  
 }
 
 vn_str *vn_get_http_header(vn_http_request *hr, const char *name) {

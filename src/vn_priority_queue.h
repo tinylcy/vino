@@ -7,7 +7,7 @@
 
 #include <sys/time.h>
 
-#define VN_MAX_PQ_SIZE     8192
+#define VN_MAX_PQ_SIZE     65535
 #define VN_PQ_DELETED      1
 #define VN_PQ_NOT_DELETED  0
 

@@ -13,11 +13,11 @@ extern vn_priority_queue pq;
 
 int vn_event_timer_init(void) {
     vn_pq_init(&pq);
-    vn_time_update();
+    vn_event_time_update();
     return 0;
 }
 
-void vn_time_update(void) {
+void vn_event_time_update(void) {
     struct timeval tv;
     vn_sec_t sec;
     vn_msec_t msec;
@@ -80,6 +80,8 @@ void vn_event_add_timer(vn_http_event *event, vn_msec_t timer) {
     if ((node = (vn_priority_queue_node *) malloc(sizeof(vn_priority_queue_node))) == NULL) {
         err_sys("[vn_event_add_timer] malloc error");
     }
+
+    vn_event_time_update();
     key = vn_current_msec + timer;
     node->key = key;
     node->data = (void *) event;
