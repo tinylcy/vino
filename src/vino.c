@@ -27,6 +27,7 @@
 #include "vn_logger.h"
 #include "util.h"
 #include "error.h"
+// #include "thread_pool.h"
 
 static char *port = VN_PORT;  // 监听端口
 
@@ -75,6 +76,13 @@ int main(int argc, char *argv[]) {
     struct epoll_event ep_event;
     vn_http_event *http_event;
     vn_msec_t time;
+
+    /* create thread pool */
+    // void *thread_pool = thread_pool_init(4);
+    // if (thread_pool == NULL) {
+    //     err_sys("[main] create thread pool error");
+    //     exit(0);
+    // }
 
     vn_parse_options(argc, argv);
 
@@ -168,10 +176,16 @@ int main(int argc, char *argv[]) {
                     vn_event_add_timer(new_http_ev, VN_DEFAULT_TIMEOUT);
                 }
             } else {
+                // if (thread_pool_add_work(thread_pool, vn_handle_http_event, events[i].data.ptr) < 0) {
+                //     thread_pool_destroy(thread_pool, 0);
+                //     exit(0);
+                // }
                 vn_handle_http_event(events[i].data.ptr);
             }
         }
     }
+
+    // thread_pool_destroy(thread_pool, 1);
 
     return 0;
 }
