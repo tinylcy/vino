@@ -38,13 +38,19 @@ void vn_handle_get_event(vn_http_event *event);
 /* 
  * Create HTTP response header and store it into `headers`.
  */ 
-void vn_build_resp_headers(char *headers, int code, const char *reason, const char *content_type, 
-                            unsigned int content_length, short keep_alive);
+void vn_build_resp_headers(char *headers, 
+                           int code, 
+                           const char *reason, 
+                           const char *content_type, 
+                           unsigned int content_length, 
+                           short keep_alive);
 
 /* 
  * Create HTTP Not Found response body and store it into `body`.
  */ 
 void vn_build_resp_404_body(char *body, const char *uri);
+
+void vn_build_resp_403_body(char *body, const char *uri);
 
 const char *vn_status_message(int code);
 

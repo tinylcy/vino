@@ -22,9 +22,7 @@ int vn_get_string(vn_str *str, char *buf, size_t buf_len) {
 
     memset(buf, '\0', buf_len);
 
-    if(!str->len) {
-        return 0;
-    }
+    if(!str->len) { return 0; }
 
     if (str->len + 1 > buf_len) {
         return -1;
@@ -119,6 +117,51 @@ int vn_check_file_exist(const char *filepath) {
     }
 }
 
+int vn_check_read_permission(const char *filepath) {
+    struct stat sb;
+    pid_t prog_pid;
+    uid_t prog_uid;
+    gid_t prog_gid;
+    char proc_path[20];
+
+    /* Get UID and PID of the process */
+    prog_pid = getpid();
+    sprintf(proc_path, "/proc/%d", prog_pid);
+    if (stat(proc_path, &sb) < 0) {
+        err_sys("[vn_check_read_permission] stat proc_path error");
+    }
+    prog_uid = sb.st_uid;
+    prog_gid = sb.st_gid;
+
+    /* Get UID and PID of the file */
+    if (stat(filepath, &sb) < 0) {
+        err_sys("[vn_check_read_permission] stat filepath error");
+    }
+
+    /* If the process own the file, check if it has read access. */
+    if (prog_uid == sb.st_uid && (sb.st_mode & S_IRUSR)) {
+        return 0;
+    }
+    
+    /* 
+     * Check if the group of the process's UID matches the file's group,
+     * if so, check for read access.
+     */
+    if (prog_gid == sb.st_gid && (sb.st_mode & S_IRGRP)) {
+        return 0;
+    } 
+    
+    /*
+     * The process's UID is neither the owner of the file nor does its GID
+     * match the file's. Check whether the file is world readable. 
+     */ 
+    if (sb.st_mode & S_IROTH) {
+        return 0;
+    }
+
+    return -1;
+}
+
 void vn_get_filetype(const char *filepath, char *filetype) {
     if (strstr(filepath, ".html")) {
         strcpy(filetype, "text/html");
@@ -135,7 +178,7 @@ void vn_get_filetype(const char *filepath, char *filetype) {
 
 unsigned int vn_get_filesize(const char *filepath) {
     struct stat sb;
-    if (stat(filepath, &sb) != 0) {
+    if (stat(filepath, &sb) < 0) {
         err_sys("[vn_get_filesize] stat error");
     }
     return sb.st_size;

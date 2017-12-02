@@ -318,7 +318,15 @@ void vn_handle_get_event(vn_http_event *event) {
         return;
     } 
     
-    // TODO: Check permission
+    if (vn_check_read_permission(filepath) < 0) {
+        vn_build_resp_403_body(body, uri);
+        vn_build_resp_headers(headers, 403, "Forbidden", "text/html", strlen(body), VN_CONN_CLOSE);
+        rio_writen(event->fd, (void *) headers, strlen(headers));
+        rio_writen(event->fd, (void *) body, strlen(body));
+        vn_close_http_event((void *) event);
+        return;
+    }
+
     if ((srcfd = open(filepath, O_RDONLY, 0)) < 0) {
         err_sys("[vn_handle_get_event] open error");
     }
@@ -366,8 +374,12 @@ void vn_handle_get_event(vn_http_event *event) {
 
 }
 
-void vn_build_resp_headers(char *headers, int code, const char *reason, const char *content_type, 
-                            unsigned int content_length, short keep_alive) {
+void vn_build_resp_headers(char *headers, 
+                           int code, 
+                           const char *reason, 
+                           const char *content_type, 
+                           unsigned int content_length, 
+                           short keep_alive) {
     char *conn;
     if (NULL == reason) {
         reason = vn_status_message(code);
@@ -390,6 +402,17 @@ void vn_build_resp_404_body(char *body, const char *uri) {
     sprintf(body, "%s<hr>", body);
     sprintf(body, "%s<address>Vino Server</address>", body);
     sprintf(body, "%s</body></html>", body);
+}
+
+void vn_build_resp_403_body(char *body, const char *uri) {
+    sprintf(body, "<html><head>");
+    sprintf(body, "%s<title>403 Forbidden</title>", body);
+    sprintf(body, "%s</head><body>", body);
+    sprintf(body, "%s<h1>Forbidden</h1>", body);
+    sprintf(body, "%s<p>You don't have permission to access %s on this server.</p>", body, uri);
+    sprintf(body, "%s<hr>", body);
+    sprintf(body, "%s<address>Vino Server</address>", body);
+    sprintf(body, "%s</body></html>", body);    
 }
 
 const char *vn_status_message(int code) {

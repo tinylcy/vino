@@ -72,6 +72,13 @@ int make_socket_non_blocking(int sockfd);
 int vn_check_file_exist(const char *filepath);
 
 /*
+ * Check if the process has permission to read file.
+ *  0 - Yes
+ * <0 - No
+ */ 
+int vn_check_read_permission(const char *filepath);
+
+/*
  * Derive file type from file name.
  */
 void vn_get_filetype(const char *filepath, char *filetype);
