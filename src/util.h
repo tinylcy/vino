@@ -1,6 +1,6 @@
 /*
- *  Copyright (C) Chenyang Li
- *  Copyright (C) Vino
+ * Copyright (C) Chenyang Li
+ * Copyright (C) Vino
  */
 #ifndef VINO_UTIL_H
 #define VINO_UTIL_H
@@ -98,4 +98,4 @@ void vn_signal(int signum, void (*handler)(int));
  */ 
 void vn_parse_config(const char *conf_file, vn_conf *conf);
 
-#endif
+#endif /* VINO_UTIL_H */

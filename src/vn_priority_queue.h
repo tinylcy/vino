@@ -1,6 +1,6 @@
 /*
- *  Copyright (C) Chenyang Li
- *  Copyright (C) Vino
+ * Copyright (C) Chenyang Li
+ * Copyright (C) Vino
  */
 #ifndef VINO_VN_PRIORITY_QUEUE_H
 #define VINO_VN_PRIORITY_QUEUE_H

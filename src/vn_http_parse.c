@@ -1,14 +1,13 @@
 /*
- *  Copyright (C) Chenyang Li
- *  Copyright (C) Vino
+ * Copyright (C) Chenyang Li
+ * Copyright (C) Vino
  */
 #include <stdlib.h>
-
 #include "vn_http_parse.h"
 #include "vn_request.h"
 #include "vn_linked_list.h"
 #include "util.h"
-#include "error.h"
+#include "vn_error.h"
 
 #define vn_str3_cmp(m, c0, c1, c2, c3)                                \
     *((unsigned int *) m) == ((c3 << 24) | (c2 << 16) | (c1 << 8) | c0)

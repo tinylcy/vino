@@ -1,13 +1,12 @@
 /*
- *  Copyright (C) Chenyang Li
- *  Copyright (C) Vino
+ * Copyright (C) Chenyang Li
+ * Copyright (C) Vino
  */
 #include <stdlib.h>
 #include <sys/time.h>
-
 #include "vn_event_timer.h"
 #include "vn_priority_queue.h"
-#include "error.h"
+#include "vn_error.h"
 
 extern vn_priority_queue pq;
 

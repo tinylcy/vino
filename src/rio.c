@@ -1,6 +1,6 @@
 /*
- *  Copyright (C) Chenyang Li
- *  Copyright (C) Vino
+ * Copyright (C) Computer Systems: A Programmer's Perspective
+ * Copyright (C) CSAPP
  */
 #include <stdio.h>
 #include <stdlib.h>
@@ -10,7 +10,6 @@
 #include <unistd.h>
 #include <errno.h>
 #include <string.h>
-
 #include "rio.h"
 
 ssize_t rio_readn(int fd, void *userbuf, size_t n) {

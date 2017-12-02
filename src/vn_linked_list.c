@@ -1,12 +1,11 @@
 /*
- *  Copyright (C) Chenyang Li
- *  Copyright (C) Vino
+ * Copyright (C) Chenyang Li
+ * Copyright (C) Vino
  */
 #include <stdio.h>
 #include <stdlib.h>
-
 #include "vn_linked_list.h"
-#include "error.h"
+#include "vn_error.h"
 
 void vn_linked_list_init(vn_linked_list *list) {
     list->head = list->tail = NULL;

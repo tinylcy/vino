@@ -1,12 +1,11 @@
 /*
- *  Copyright (C) Chenyang Li
- *  Copyright (C) Vino
+ * Copyright (C) Chenyang Li
+ * Copyright (C) Vino
  */
 #include <stdlib.h>
 #include <time.h>
-
 #include "vn_priority_queue.h"
-#include "error.h"
+#include "vn_error.h"
 
 static int vn_less(vn_priority_queue *pq, int i, int j) {
     vn_priority_queue_node *a = pq->nodes[i], *b = pq->nodes[j];

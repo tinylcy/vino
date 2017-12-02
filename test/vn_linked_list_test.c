@@ -2,7 +2,7 @@
 #include <string.h>
 #include "../src/vn_linked_list.h"
 #include "../src/util.h"
-#include "../src/error.h"
+#include "../src/vn_error.h"
 
 int main(void) {
     int i;

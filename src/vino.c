@@ -1,6 +1,6 @@
 /*
- *  Copyright (C) Chenyang Li
- *  Copyright (C) Vino
+ * Copyright (C) Chenyang Li
+ * Copyright (C) Vino
  */
 #include <stdio.h>
 #include <stdlib.h>
@@ -15,10 +15,9 @@
 #include <sys/mman.h>
 #include <sys/stat.h>
 #include <errno.h>
-
 #include "vino.h"
 #include "rio.h"
-#include "socketlib.h"
+#include "vn_socketlib.h"
 #include "vn_request.h"
 #include "vn_epoll.h"
 #include "vn_linked_list.h"
@@ -26,7 +25,7 @@
 #include "vn_event_timer.h"
 #include "vn_logger.h"
 #include "util.h"
-#include "error.h"
+#include "vn_error.h"
 
 static char *port = VN_PORT;
 

@@ -1,9 +1,9 @@
 /*
- *  Copyright (C) Chenyang Li
- *  Copyright (C) Vino
+ * Copyright (C) Chenyang Li
+ * Copyright (C) Vino
  */
-#ifndef VINO_SOCKETLIB_H
-#define VINO_SOCKETLIB_H
+#ifndef VINO_VN_SOCKETLIB_H
+#define VINO_VN_SOCKETLIB_H
 
 /* The backlog argument defines the maximum length to which 
 the queue of pending connections for sockfd may grow */
@@ -19,4 +19,4 @@ int open_clientfd(const char *hostname, const char *port);
  */
 int open_listenfd(const char *port);
 
-#endif /* VINO_SOCKETLIB_H */
+#endif /* VINO_VN_SOCKETLIB_H */

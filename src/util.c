@@ -1,6 +1,6 @@
 /*
- *  Copyright (C) Chenyang Li
- *  Copyright (C) Vino
+ * Copyright (C) Chenyang Li
+ * Copyright (C) Vino
  */
 #include <stdio.h>
 #include <stdlib.h>
@@ -12,9 +12,8 @@
 #include <stdarg.h>
 #include <sys/types.h>
 #include <sys/stat.h>
-
 #include "util.h"
-#include "error.h"
+#include "vn_error.h"
 
 int vn_get_string(vn_str *str, char *buf, size_t buf_len) {
     const char *s;

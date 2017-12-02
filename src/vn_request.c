@@ -1,17 +1,16 @@
 /*
- *  Copyright (C) Chenyang Li
- *  Copyright (C) Vino
+ * Copyright (C) Chenyang Li
+ * Copyright (C) Vino
  */
 #include <stdio.h>
 #include <stdlib.h>
 #include <unistd.h>
 #include <string.h>
 #include <ctype.h>
-
 #include "vn_request.h"
 #include "vn_linked_list.h"
 #include "util.h"
-#include "error.h"
+#include "vn_error.h"
 
 void vn_init_http_request(vn_http_request *hr) {
     /* Initialize HTTP parser (DFA) state */

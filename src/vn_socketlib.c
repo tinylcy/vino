@@ -1,6 +1,6 @@
 /*
- *  Copyright (C) Chenyang Li
- *  Copyright (C) Vino
+ * Copyright (C) Chenyang Li
+ * Copyright (C) Vino
  */
 #include <stdio.h>
 #include <stdlib.h>
@@ -9,9 +9,8 @@
 #include <sys/types.h>
 #include <sys/socket.h>
 #include <netdb.h>
-
-#include "error.h"
-#include "socketlib.h"
+#include "vn_error.h"
+#include "vn_socketlib.h"
 
 int open_clientfd(const char *hostname, const char *port) {
     int clientfd;

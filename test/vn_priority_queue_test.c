@@ -1,7 +1,7 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include "../src/vn_priority_queue.h"
-#include "../src/error.h"
+#include "../src/vn_error.h"
 
 int main(void) {
     vn_priority_queue pq;

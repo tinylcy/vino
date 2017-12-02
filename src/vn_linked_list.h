@@ -1,6 +1,6 @@
 /*
- *  Copyright (C) Chenyang Li
- *  Copyright (C) Vino
+ * Copyright (C) Chenyang Li
+ * Copyright (C) Vino
  */
 #ifndef VINO_VN_LINKED_LIST_H
 #define VINO_VN_LINKED_LIST_H

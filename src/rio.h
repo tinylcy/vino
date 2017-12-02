@@ -1,6 +1,6 @@
 /*
- *  Copyright (C) Chenyang Li
- *  Copyright (C) Vino
+ * Copyright (C) Computer Systems: A Programmer's Perspective
+ * Copyright (C) CSAPP
  */
 #ifndef VINO_RIO_H
 #define VINO_RIO_H

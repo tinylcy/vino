@@ -1,7 +1,6 @@
 #include <stdio.h>
 #include <stdlib.h>
-
-#include "../src/error.h"
+#include "../src/vn_error.h"
 #include "../src/util.h"
 
 int main(void) {

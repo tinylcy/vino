@@ -1,11 +1,11 @@
 /*
- *  Copyright (C) Chenyang Li
- *  Copyright (C) Vino
+ * Copyright (C) Chenyang Li
+ * Copyright (C) Vino
  */
 #include <stdio.h>
 #include <stdlib.h>
 #include "vn_epoll.h"
-#include "error.h"
+#include "vn_error.h"
 
 void vn_epoll_init(void) {
     events = (struct epoll_event *) malloc(sizeof(struct epoll_event) * VN_MAXEVENTS);

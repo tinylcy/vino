@@ -1,9 +1,9 @@
 /*
- *  Copyright (C) Chenyang Li
- *  Copyright (C) Vino
+ * Copyright (C) Chenyang Li
+ * Copyright (C) Vino
  */
-#ifndef VINO_ERROR_H
-#define VINO_ERROR_H
+#ifndef VINO_VN_ERROR_H
+#define VINO_VN_ERROR_H
 
 #include <stdarg.h>
 
@@ -19,4 +19,4 @@ void err_sys(const char *fmt, ...);
 
 void err_dump(const char *fmt, ...);
 
-#endif /* VINO_ERROR_H */
+#endif /* VINO_VN_ERROR_H */

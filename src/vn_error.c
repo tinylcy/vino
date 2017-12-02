@@ -1,13 +1,12 @@
 /*
- *  Copyright (C) Chenyang Li
- *  Copyright (C) Vino
+ * Copyright (C) Chenyang Li
+ * Copyright (C) Vino
  */
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
 #include <errno.h>
-
-#include "error.h"
+#include "vn_error.h"
 
 void err_doit(int useerrno, const char *fmt, va_list ap) {
     int errno_orig;
