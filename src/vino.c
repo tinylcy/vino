@@ -165,7 +165,9 @@ int main(int argc, char *argv[]) {
                     clientlen = sizeof(struct sockaddr_storage);                
                     connfd = accept(listenfd, (struct sockaddr *) &clientaddr, &clientlen);
                     if (connfd < 0) {
-                        if (errno == EAGAIN) {
+                        if (errno == EINTR) {
+                            continue;
+                        } else if (errno == EAGAIN) {
                             break;  /* All connections have been processed */
                         } else {
                             err_sys("[main] accept error");
@@ -216,7 +218,9 @@ void vn_handle_http_event(vn_http_event *event) {
 
         /* If errno == EAGAIN, that means we have read all data. */
         if (nread < 0) {
-            if (errno != EAGAIN) {
+            if (errno == EINTR) {
+                continue;
+            } if (errno != EAGAIN) {
                 err_sys("[vn_handle_http_event] rio_readn error");
             }
             break;
@@ -228,7 +232,14 @@ void vn_handle_http_event(vn_http_event *event) {
 
         rv = vn_http_parse_request_line(&event->hr, event->buf);
         if (rv < 0) {
+            /* 
+             * Before closing the illegal connection, the corresponding
+             * node in priority queue should be removed at first. Or
+             * after timeout the fd will be closed twice.
+             */
+            vn_pq_delete_node(event->pq_node);
             vn_close_http_event((void *) event);
+            vn_log_warn("A connection with illegal HTTP request line has been closed.");
             return;
         }
         if (rv == VN_AGAIN) {
@@ -240,7 +251,9 @@ void vn_handle_http_event(vn_http_event *event) {
         while (VN_KEEP_PARSING) {
             rv = vn_http_parse_header_line(&event->hr, event->buf);
             if (rv < 0) {
+                vn_pq_delete_node(event->pq_node);
                 vn_close_http_event((void *) event);
+                vn_log_warn("A connection with illegal HTTP request headers has been closed.");
                 return;
             }
             if (rv == VN_HTTP_PARSE_HEADER_DONE) {
