@@ -15,6 +15,35 @@
 #include "util.h"
 #include "vn_error.h"
 
+#define MIME_ENTRY(_ext, _type) { _ext, sizeof(_ext) - 1, _type }
+
+static vn_mime_entry vn_builtin_mime_type[] = {
+    MIME_ENTRY("html", "text/html"),
+    MIME_ENTRY("htm", "text/html"),
+    MIME_ENTRY("css", "text/css"),
+    MIME_ENTRY("js", "text/javascript"),
+    MIME_ENTRY("gif", "image/gif"),
+    MIME_ENTRY("jpg", "image/jpeg"),
+    MIME_ENTRY("jpeg", "image/jpeg"),
+    MIME_ENTRY("png", "image/png"),
+    MIME_ENTRY("svg", "image/svg+xml"),
+    MIME_ENTRY("txt", "text/plain"),
+    MIME_ENTRY("xml", "text/xml"),
+    MIME_ENTRY("ttf", "application/x-font-ttf"),
+    MIME_ENTRY("json", "application/json"),
+    MIME_ENTRY("xslt", "application/xml"),
+    MIME_ENTRY("xsl", "application/xml"),
+    MIME_ENTRY("doc", "application/msword"),
+    MIME_ENTRY("xls", "application/excel"),
+    MIME_ENTRY("zip", "application/x-zip-compressed"),
+    MIME_ENTRY("tgz", "application/x-tar-gz"),
+    MIME_ENTRY("tar", "application/x-tar"),
+    MIME_ENTRY("gz", "application/x-gunzip"),
+    MIME_ENTRY("rar", "application/x-rar-compressed"),
+    MIME_ENTRY("pdf", "application/pdf"),
+    { NULL, 0, NULL }
+};
+
 int vn_get_string(vn_str *str, char *buf, size_t buf_len) {
     const char *s;
     unsigned int i;
@@ -23,9 +52,7 @@ int vn_get_string(vn_str *str, char *buf, size_t buf_len) {
 
     if(!str->len) { return 0; }
 
-    if (str->len + 1 > buf_len) {
-        return -1;
-    }
+    if (str->len + 1 > buf_len) { return -1; }
 
     s = str->p;
     i = 0;
@@ -43,9 +70,7 @@ int vn_str_cmp(const vn_str *str1, const char *str2) {
     size_t n1 = str1->len, n2 = strlen(str2);
     size_t shorter_len = n1 < n2 ? n1 : n2;
     
-    for (i = 0; i < shorter_len && p1[i] == p2[i]; i++) {
-        ;
-    }
+    for (i = 0; i < shorter_len && p1[i] == p2[i]; i++) { ; }
     
     if (i == shorter_len) {
         if (n1 == n2) { return 0; }
@@ -161,18 +186,25 @@ int vn_check_read_permission(const char *filepath) {
     return -1;
 }
 
-void vn_get_filetype(const char *filepath, char *filetype) {
-    if (strstr(filepath, ".html")) {
-        strcpy(filetype, "text/html");
-    } else if (strstr(filepath, ".gif")) {
-        strcpy(filetype, "image/gif");
-    } else if (strstr(filepath, ".png")) {
-        strcpy(filetype, "image/png");
-    } else if (strstr(filepath, ".jpg") || strstr(filepath, ".jpeg")) {
-        strcpy(filetype, "image/jpeg");
-    } else {
-        strcpy(filetype, "text/plain");
+void vn_get_mime_type(const char *filepath, char *mime_type) {
+    vn_mime_entry entry;
+    size_t i, path_len;
+    char *dot;
+
+    path_len = strlen(filepath);
+    if ((dot = strrchr(filepath, '.')) == NULL || filepath[path_len - 1] == '.') {
+        strcpy(mime_type, "text/plain");
+        return;
     }
+    for (i = 0; vn_builtin_mime_type[i].extension != NULL; i++) {
+        entry = vn_builtin_mime_type[i];
+        if (strlen(dot + 1) == entry.ext_len && strncmp(dot + 1, entry.extension, entry.ext_len) == 0) {
+            strcpy(mime_type, entry.mime_type);
+            return;
+        }
+    }
+
+    strcpy(mime_type, "text/plain");
 }
 
 unsigned int vn_get_filesize(const char *filepath) {

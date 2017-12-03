@@ -98,7 +98,7 @@ int vn_http_parse_request_line(vn_http_request *hr, const char *buf) {
             switch (ch) {
             case ' ':
                 hr->uri.len = p - hr->uri.p;
-                state = sw_http_H;
+                state = sw_space_before_version;
                 break;
             case '?':
                 hr->uri.len = p - hr->uri.p;

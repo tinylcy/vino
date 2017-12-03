@@ -303,7 +303,7 @@ void vn_handle_get_event(vn_http_event *event) {
     int srcfd;
     void *srcp;
     unsigned int filesize;
-    char filetype[VN_FILETYPE_SIZE];
+    char mime_type[VN_FILETYPE_SIZE];
     vn_str *connection;
     short conn_flag;
     
@@ -340,13 +340,13 @@ void vn_handle_get_event(vn_http_event *event) {
     }
 
     /* Build response header by Connection header */
-    vn_get_filetype(filepath, filetype);
+    vn_get_mime_type(filepath, mime_type);
     connection = vn_get_http_header(hr, "Connection");
     if (NULL != connection && (!vn_str_cmp(connection, "keep-alive") || !vn_str_cmp(connection, "Keep-Alive"))) {
-        vn_build_resp_headers(headers, 200, "OK", filetype, filesize, VN_CONN_KEEP_ALIVE);
+        vn_build_resp_headers(headers, 200, "OK", mime_type, filesize, VN_CONN_KEEP_ALIVE);
         conn_flag = VN_CONN_KEEP_ALIVE;
     } else {
-        vn_build_resp_headers(headers, 200, "OK", filetype, filesize, VN_CONN_CLOSE);
+        vn_build_resp_headers(headers, 200, "OK", mime_type, filesize, VN_CONN_CLOSE);
         conn_flag = VN_CONN_CLOSE;
     }
 

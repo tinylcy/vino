@@ -26,6 +26,13 @@ typedef struct vn_conf_s {
     char ip[VN_IPBUF];
 } vn_conf;
 
+/* MIME type entry */
+typedef struct vn_mime_entry_s {
+    const char *extension;
+    size_t      ext_len;
+    const char *mime_type;
+} vn_mime_entry;
+
 /*
  * Fetch specified-length string from `str` into `buf`. 
  * 
@@ -79,9 +86,9 @@ int vn_check_file_exist(const char *filepath);
 int vn_check_read_permission(const char *filepath);
 
 /*
- * Derive file type from file name.
+ * Get MIME type from filename extension.
  */
-void vn_get_filetype(const char *filepath, char *filetype);
+void vn_get_mime_type(const char *filepath, char *mime_type);
 
 /*
  * Return the size of the file.
