@@ -6,6 +6,7 @@
 #include <sys/time.h>
 #include "vn_event_timer.h"
 #include "vn_priority_queue.h"
+#include "vn_logger.h"
 #include "vn_error.h"
 
 extern vn_priority_queue pq;
@@ -45,7 +46,7 @@ vn_msec_t vn_event_find_timer(void) {
 
 void vn_event_expire_timers(void) {
     vn_priority_queue_node *node;
-    vn_http_event *event;
+    vn_http_connection *conn;
 
     while (!vn_pq_isempty(&pq)) {
         node = vn_pq_min(&pq);
@@ -63,16 +64,16 @@ void vn_event_expire_timers(void) {
             return;
         }
 
-        event = (vn_http_event *) node->data;
+        conn = (vn_http_connection *) node->data;
     
-        if (event->handler) {
-            (*event->handler)(event);
+        if (conn->handler) {
+            (*conn->handler)(conn);
         }
         vn_pq_delete_min(&pq);
     }
 }
 
-void vn_event_add_timer(vn_http_event *event, vn_msec_t timer) {
+void vn_event_add_timer(vn_http_connection *conn, vn_msec_t timer) {
     vn_priority_queue_node *node;
     vn_msec_t key;
 
@@ -83,9 +84,9 @@ void vn_event_add_timer(vn_http_event *event, vn_msec_t timer) {
     vn_event_time_update();
     key = vn_current_msec + timer;
     node->key = key;
-    node->data = (void *) event;
+    node->data = (void *) conn;
     node->deleted = VN_PQ_NOT_DELETED;
     vn_pq_insert(&pq, node);
 
-    event->pq_node = node;
+    conn->pq_node = node;
 }

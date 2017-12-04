@@ -9,66 +9,68 @@
 #include <ctype.h>
 #include "vn_request.h"
 #include "vn_linked_list.h"
+#include "vn_priority_queue.h"
+#include "vn_logger.h"
 #include "util.h"
 #include "vn_error.h"
 
-void vn_init_http_request(vn_http_request *hr) {
+void vn_init_http_request(vn_http_request *req) {
     /* Initialize HTTP parser (DFA) state */
-    hr->state = 0;
-    hr->pos = hr->last = NULL;
+    req->state = 0;
+    req->pos = req->last = NULL;
 
     /* Initialize HTTP request line */
-    hr->method.p = hr->uri.p = hr->proto.p = NULL;
-    hr->method.len = hr->uri.len = hr->proto.len = 0;
-    hr->query_string.p = NULL;
-    hr->query_string.len = 0;
+    req->method.p = req->uri.p = req->proto.p = NULL;
+    req->method.len = req->uri.len = req->proto.len = 0;
+    req->query_string.p = NULL;
+    req->query_string.len = 0;
 
     /* Initialize HTTP request headers */
-    hr->header_cnt = 0;
-    hr->header_name_len = hr->header_value_len = 0;
-    hr->header_name_start = hr->header_value_start = NULL;
-    vn_linked_list_init(&hr->header_name_list);
-    vn_linked_list_init(&hr->header_value_list);
+    req->header_cnt = 0;
+    req->header_name_len = req->header_value_len = 0;
+    req->header_name_start = req->header_value_start = NULL;
+    vn_linked_list_init(&req->header_name_list);
+    vn_linked_list_init(&req->header_value_list);
 }
 
-void vn_init_http_event(vn_http_event *event, int fd, int epfd) {
-    event->fd = fd;
-    event->epfd = epfd;
+void vn_init_http_connection(vn_http_connection *conn, int fd, int epfd) {
+    conn->fd = fd;
+    conn->epfd = epfd;
 
     /* Initialize buffer */
-    memset(event->buf, '\0', VN_BUFSIZE);
-    event->bufptr = event->buf;
-    event->remain_size = VN_BUFSIZE;
+    memset(conn->buf, '\0', VN_BUFSIZE);
+    conn->bufptr = conn->buf;
+    conn->remain_size = VN_BUFSIZE;
 
-    vn_init_http_request(&event->hr);
+    vn_init_http_request(&conn->request);
     /* Initialize HTTP request parser state */
-    event->hr.pos = event->hr.last = event->buf;
+    conn->request.pos = conn->request.last = conn->buf;
 
-    event->handler = vn_close_http_event;
-    event->pq_node = NULL;
+    conn->handler = vn_close_http_connection;
+    conn->pq_node = NULL;
 }
 
-void vn_reset_http_event(vn_http_event *event) {
+void vn_reset_http_connection(vn_http_connection *conn) {
     /* Reset buffer */
-    memset(event->buf, '\0', VN_BUFSIZE);
-    event->bufptr = event->buf;
-    event->remain_size = VN_BUFSIZE;
+    memset(conn->buf, '\0', VN_BUFSIZE);
+    conn->bufptr = conn->buf;
+    conn->remain_size = VN_BUFSIZE;
 
-    vn_init_http_request(&event->hr);
+    vn_init_http_request(&conn->request);
     /* Reset HTTP request parser state */
-    event->hr.pos = event->hr.last = event->buf;
+    conn->request.pos = conn->request.last = conn->buf;
 
-    event->handler = vn_close_http_event;  
+    conn->handler = vn_close_http_connection;  
 }
 
-vn_str *vn_get_http_header(vn_http_request *hr, const char *name) {
+vn_str *vn_get_http_header(vn_http_request *req, const char *name) {
     int i;
     vn_str *name_str, *value_str;
     vn_linked_list *name_list, *value_list;
     vn_linked_list_node *name_node, *value_node;
 
-    name_list = &hr->header_name_list;
-    value_list = &hr->header_value_list;
+    name_list = &req->header_name_list;
+    value_list = &req->header_value_list;
 
     if (vn_linked_list_isempty(name_list) && vn_linked_list_isempty(value_list)) {
         return NULL;
@@ -88,14 +90,16 @@ vn_str *vn_get_http_header(vn_http_request *hr, const char *name) {
     return NULL;
 }
 
-void vn_close_http_event(void *event) {
-    vn_http_event *ev = (vn_http_event *) event;
-    vn_http_request hr = ev->hr;
+void vn_close_http_connection(void *conn) {
+    vn_http_connection *connection = (vn_http_connection *) conn;
+    vn_http_request req = connection->request;
+    vn_priority_queue_node *pq_node = connection->pq_node;
 
-    if (close(ev->fd) < 0) {
-        err_sys("[vn_close_http_event] close error");
+    if (close(connection->fd) < 0) {
+        err_sys("[vn_close_http_connection] close error");
     }
-    vn_linked_list_free(&hr.header_name_list);
-    vn_linked_list_free(&hr.header_value_list);
-    free(ev);
+    vn_linked_list_free(&req.header_name_list);
+    vn_linked_list_free(&req.header_value_list);
+    pq_node->data = NULL;
+    free(connection);
 }

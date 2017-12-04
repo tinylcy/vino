@@ -48,45 +48,45 @@ typedef struct vn_http_request_s {
 
 typedef void (*timeout_handler)(void *);
 
-/* HTTP request event */
-typedef struct vn_http_event_s {
+/* HTTP request connection */
+typedef struct vn_http_connection_s {
     int                     fd;
     int                     epfd;
     char                    buf[VN_BUFSIZE];
     char                    *bufptr;
     size_t                  remain_size;
-    vn_http_request         hr;
+    vn_http_request         request;
     timeout_handler         handler;
     vn_priority_queue_node  *pq_node;
-} vn_http_event;
+} vn_http_connection;
 
 /*
  * Initialize HTTP request message.
  */
-void vn_init_http_request(vn_http_request *hr);       
+void vn_init_http_request(vn_http_request *req);       
 
 /*
- * Initialize HTTP request event.
+ * Initialize HTTP request connection.
  */ 
-void vn_init_http_event(vn_http_event *event, int fd, int epfd);
+void vn_init_http_connection(vn_http_connection *conn, int fd, int epfd);
 
 /*
- * Reset HTTP request event. 
+ * Reset HTTP request connectin. 
  */ 
-void vn_reset_http_event(vn_http_event *event);
+void vn_reset_http_connection(vn_http_connection *conn);
 
 /*
  * Search and return the header `name` in parsed HTTP request
- * message `hr`.
+ * message `req`.
  * 
  * If header `name` is not found, NULL is returned.
  */
-vn_str *vn_get_http_header(vn_http_request *hr, const char *name);
+vn_str *vn_get_http_header(vn_http_request *req, const char *name);
 
 /*
  * Close the connection, don't forget to cast the
- * type of `event` to (vn_http_event *).
+ * type of `conn` to (vn_http_connection *).
  */
-void vn_close_http_event(void *event);
+void vn_close_http_connection(void *conn);
 
 #endif /* VINO_VN_REQUEST_H */

@@ -5,6 +5,7 @@
 #include <stdlib.h>
 #include <time.h>
 #include "vn_priority_queue.h"
+#include "vn_logger.h"
 #include "vn_error.h"
 
 static int vn_less(vn_priority_queue *pq, int i, int j) {
@@ -77,10 +78,12 @@ vn_priority_queue_node *vn_pq_delete_node(vn_priority_queue_node *node) {
     if (NULL == node) {
         return NULL;
     }
-    if (node->deleted == VN_PQ_DELETED) {
-        // TODO: logger
+    if (node->deleted == VN_PQ_DELETED || node->data == NULL) {
+        vn_log_warn("The priority queue node has already been marked as [DELETED].");
+        return node;
     }
     node->deleted = VN_PQ_DELETED;
+    return node;
 }
 
 int vn_pq_isempty(vn_priority_queue *pq) {

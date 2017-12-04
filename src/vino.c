@@ -89,7 +89,7 @@ int main(int argc, char *argv[]) {
     socklen_t clientlen;
     struct sockaddr_storage clientaddr; 
     struct epoll_event ep_event;
-    vn_http_event *http_event;
+    vn_http_connection *http_conn, *conn;
     vn_msec_t time;
 
     vn_parse_options(argc, argv);
@@ -125,13 +125,13 @@ int main(int argc, char *argv[]) {
         err_sys("[main] vn_epoll_create error");
     }
 
-    if ((http_event = (vn_http_event *) malloc(sizeof(vn_http_event))) == NULL) {
-        err_sys("[main] malloc vn_http_event error");
+    if ((http_conn = (vn_http_connection *) malloc(sizeof(vn_http_connection))) == NULL) {
+        err_sys("[main] malloc vn_http_connection error");
     }
-    vn_init_http_event(http_event, listenfd, epfd);
+    vn_init_http_connection(http_conn, listenfd, epfd);
 
     ep_event.events = EPOLLIN | EPOLLET;
-    ep_event.data.ptr = (void *) http_event;
+    ep_event.data.ptr = (void *) http_conn;
     vn_epoll_add(epfd, listenfd, &ep_event);
 
     vn_event_timer_init();
@@ -157,18 +157,31 @@ int main(int argc, char *argv[]) {
 
         /* Deal with returned list of events */
         for (i = 0; i < nready; i++) {
-            vn_http_event *event = (vn_http_event *) events[i].data.ptr;
-            fd = event->fd;
+            conn = (vn_http_connection *) events[i].data.ptr;
+            fd = conn->fd;
 
+            if ((events[i].events & EPOLLERR) || (events[i].events & EPOLLHUP)
+                || !(events[i].events & EPOLLIN)) {
+                vn_log_warn("An error has occured on file descriptor [%d], or the socket is not ready for reading.", fd);
+                vn_pq_delete_node(conn->pq_node);
+                vn_close_http_connection(events[i].data.ptr);
+                continue;
+            }
+
+            /*
+             * A notification has occured on the listening socket, which
+             * means one or more incoming connections. 
+             */
             if (listenfd == fd) {
                 while (VN_ACCEPT) {
                     clientlen = sizeof(struct sockaddr_storage);                
                     connfd = accept(listenfd, (struct sockaddr *) &clientaddr, &clientlen);
+                    
                     if (connfd < 0) {
                         if (errno == EINTR) {
                             continue;
                         } else if (errno == EAGAIN) {
-                            break;  /* All connections have been processed */
+                            break;  /* All incoming connections have been processed */
                         } else {
                             err_sys("[main] accept error");
                         }
@@ -178,25 +191,25 @@ int main(int argc, char *argv[]) {
                         err_sys("[main] make_socket_non_blocking error");
                     }
 
-                    vn_http_event *new_http_ev;
+                    vn_http_connection *new_conn;
                     struct epoll_event new_ep_ev;
 
-                    if ((new_http_ev = (vn_http_event *) malloc(sizeof(vn_http_event))) == NULL) {
-                        err_sys("[main] malloc vn_http_event error");
+                    if ((new_conn = (vn_http_connection *) malloc(sizeof(vn_http_connection))) == NULL) {
+                        err_sys("[main] malloc vn_http_connection error");
                     }
 
-                    vn_init_http_event(new_http_ev, connfd, epfd);
+                    vn_init_http_connection(new_conn, connfd, epfd);
                     new_ep_ev.events = EPOLLIN | EPOLLET;
-                    new_ep_ev.data.ptr = (void *) new_http_ev;
+                    new_ep_ev.data.ptr = (void *) new_conn;
                     vn_epoll_add(epfd, connfd, &new_ep_ev);
 
-                    vn_event_add_timer(new_http_ev, VN_DEFAULT_TIMEOUT);
+                    vn_event_add_timer(new_conn, VN_DEFAULT_TIMEOUT);
                     
                 }
             /* End of fd == listenfd */
 
             } else {
-                vn_handle_http_event(events[i].data.ptr);
+                vn_handle_http_connection((vn_http_connection *) events[i].data.ptr);
             }
         }
     }
@@ -204,12 +217,12 @@ int main(int argc, char *argv[]) {
     return 0;
 }
 
-void vn_handle_http_event(vn_http_event *event) {
+void vn_handle_http_connection(vn_http_connection *conn) {
     int nread, buf_len;
     int rv, req_line_completed, req_headers_completed;
 
     while (VN_KEEP_READING) {
-        nread = read(event->fd, event->bufptr, event->remain_size);
+        nread = read(conn->fd, conn->bufptr, conn->remain_size);
 
         /* End of file, the remote has closed the connection. */
         if (0 == nread) {
@@ -220,25 +233,25 @@ void vn_handle_http_event(vn_http_event *event) {
         if (nread < 0) {
             if (errno == EINTR) {
                 continue;
-            } if (errno != EAGAIN) {
-                err_sys("[vn_handle_http_event] rio_readn error");
+            } if (errno != EAGAIN && errno != EWOULDBLOCK) {
+                err_sys("[vn_handle_http_connection] rio_readn error");
             }
             break;
         }
 
-        event->bufptr += nread;
-        event->hr.last += nread;     /* Update the last character parser can read */
-        event->remain_size -= nread;
+        conn->bufptr += nread;
+        conn->request.last += nread;     /* Update the last character parser can read */
+        conn->remain_size -= nread;
 
-        rv = vn_http_parse_request_line(&event->hr, event->buf);
+        rv = vn_http_parse_request_line(&conn->request, conn->buf);
         if (rv < 0) {
             /* 
              * Before closing the illegal connection, the corresponding
-             * node in priority queue should be removed at first. Or
-             * after timeout the fd will be closed twice.
+             * node should be removed in priority queue at first, or
+             * after timeout the file descriptor will be closed twice.
              */
-            vn_pq_delete_node(event->pq_node);
-            vn_close_http_event((void *) event);
+            vn_pq_delete_node(conn->pq_node);
+            vn_close_http_connection((void *) conn);
             vn_log_warn("A connection with illegal HTTP request line has been closed.");
             return;
         }
@@ -249,10 +262,10 @@ void vn_handle_http_event(vn_http_event *event) {
         }
 
         while (VN_KEEP_PARSING) {
-            rv = vn_http_parse_header_line(&event->hr, event->buf);
+            rv = vn_http_parse_header_line(&conn->request, conn->buf);
             if (rv < 0) {
-                vn_pq_delete_node(event->pq_node);
-                vn_close_http_event((void *) event);
+                vn_pq_delete_node(conn->pq_node);
+                vn_close_http_connection((void *) conn);
                 vn_log_warn("A connection with illegal HTTP request headers has been closed.");
                 return;
             }
@@ -272,29 +285,29 @@ void vn_handle_http_event(vn_http_event *event) {
         return;
     }
 
-    // vn_print_http_request(&event->hr);
+    // vn_print_http_request(&conn->request);
 
-    if (!vn_str_cmp(&event->hr.method, "GET")) {
-        vn_handle_get_event(event);
-    } else if (!vn_str_cmp(&event->hr.method, "POST")) {
+    if (!vn_str_cmp(&conn->request.method, "GET")) {
+        vn_handle_get_connection(conn);
+    } else if (!vn_str_cmp(&conn->request.method, "POST")) {
         // TODO
     }
 
 }
 
-void vn_handle_get_event(vn_http_event *event) {
-    vn_http_request *hr;
+void vn_handle_get_connection(vn_http_connection *conn) {
+    vn_http_request *req;
     char uri[VN_MAX_HTTP_HEADER_VALUE], filepath[VN_MAX_HTTP_HEADER_VALUE];
 
     /* 
      * Remove the corresponding node in priority queue. 
-     * This is because the event will be dealt with soon.
+     * This is because the connection will be dealt with soon.
      */
-    vn_pq_delete_node(event->pq_node);
+    vn_pq_delete_node(conn->pq_node);
 
-    hr = &event->hr;
-    if (vn_get_string(&hr->uri, uri, VN_MAX_HTTP_HEADER_VALUE) == -1) {
-        err_sys("[vn_handle_get_event] vn_get_string error");
+    req = &conn->request;
+    if (vn_get_string(&req->uri, uri, VN_MAX_HTTP_HEADER_VALUE) == -1) {
+        err_sys("[vn_handle_get_connection] vn_get_string error");
     }
     if (strlen(uri) == 1 && !strncmp(uri, "/", 1)) {
         strncpy(uri, VN_DEFAULT_PAGE, strlen(VN_DEFAULT_PAGE));
@@ -303,13 +316,13 @@ void vn_handle_get_event(vn_http_event *event) {
     /* Append default static resource path before HTTP request's uri */
     memset(filepath, '\0', VN_MAX_HTTP_HEADER_VALUE);
     if (strcat(filepath, VN_PARENT_DIR) == NULL) {
-        err_sys("[vn_handle_get_event] strcat [VN_PARENT_DIR] error");
+        err_sys("[vn_handle_get_connection] strcat [VN_PARENT_DIR] error");
     }
     if (strcat(filepath, VN_DEFAULT_STATIC_RES_DIR) == NULL) {
-        err_sys("[vn_handle_get_event] strcat [DEFAULT_STATIC_RES_DIR] error");
+        err_sys("[vn_handle_get_connection] strcat [DEFAULT_STATIC_RES_DIR] error");
     }
     if (strncat(filepath, uri, strlen(uri)) == NULL) {
-        err_sys("[vn_handle_get_event] strcat [uri] error");
+        err_sys("[vn_handle_get_connection] strcat [uri] error");
     }
 
     char headers[VN_HEADERS_SIZE], body[VN_BODY_SIZE];
@@ -317,45 +330,45 @@ void vn_handle_get_event(vn_http_event *event) {
     void *srcp;
     unsigned int filesize;
     char mime_type[VN_FILETYPE_SIZE];
-    vn_str *connection;
+    vn_str *conn_str;
     short conn_flag;
     
     // TODO: nwrite = rio_writen(fd, buf, size); Check if `nwrite` == `size`.
     if (vn_check_file_exist(filepath) < 0) {
         vn_build_resp_404_body(body, uri);
         vn_build_resp_headers(headers, 404, "Not Found", "text/html", strlen(body), VN_CONN_CLOSE);
-        rio_writen(event->fd, (void *) headers, strlen(headers));
-        rio_writen(event->fd, (void *) body, strlen(body));
-        vn_close_http_event((void *) event);
+        rio_writen(conn->fd, (void *) headers, strlen(headers));
+        rio_writen(conn->fd, (void *) body, strlen(body));
+        vn_close_http_connection((void *) conn);
         return;
     } 
     
     if (vn_check_read_permission(filepath) < 0) {
         vn_build_resp_403_body(body, uri);
         vn_build_resp_headers(headers, 403, "Forbidden", "text/html", strlen(body), VN_CONN_CLOSE);
-        rio_writen(event->fd, (void *) headers, strlen(headers));
-        rio_writen(event->fd, (void *) body, strlen(body));
-        vn_close_http_event((void *) event);
+        rio_writen(conn->fd, (void *) headers, strlen(headers));
+        rio_writen(conn->fd, (void *) body, strlen(body));
+        vn_close_http_connection((void *) conn);
         return;
     }
 
     if ((srcfd = open(filepath, O_RDONLY, 0)) < 0) {
-        err_sys("[vn_handle_get_event] open error");
+        err_sys("[vn_handle_get_connection] open error");
     }
     filesize = vn_get_filesize(filepath);
     /* Map the target file into memory */
     if ((srcp = mmap(NULL, filesize, PROT_READ, MAP_PRIVATE, srcfd, 0)) == MAP_FAILED) {
-        vn_log_warn("mmap error, filepath = %s\n", filepath);
-        err_sys("[vn_handle_get_event] mmap error");
+        vn_log_warn("Call mmap error, filepath = %s\n", filepath);
+        err_sys("[vn_handle_get_connection] mmap error");
     }
     if (close(srcfd) < 0) {
-        err_sys("[vn_handle_get_event] close srcfd error");
+        err_sys("[vn_handle_get_connection] close srcfd error");
     }
 
     /* Build response header by Connection header */
     vn_get_mime_type(filepath, mime_type);
-    connection = vn_get_http_header(hr, "Connection");
-    if (NULL != connection && (!vn_str_cmp(connection, "keep-alive") || !vn_str_cmp(connection, "Keep-Alive"))) {
+    conn_str = vn_get_http_header(req, "Connection");
+    if (NULL != conn_str && (!vn_str_cmp(conn_str, "keep-alive") || !vn_str_cmp(conn_str, "Keep-Alive"))) {
         vn_build_resp_headers(headers, 200, "OK", mime_type, filesize, VN_CONN_KEEP_ALIVE);
         conn_flag = VN_CONN_KEEP_ALIVE;
     } else {
@@ -364,10 +377,10 @@ void vn_handle_get_event(vn_http_event *event) {
     }
 
     /* Send response */
-    rio_writen(event->fd, headers, strlen(headers));
-    rio_writen(event->fd, srcp, filesize);
+    rio_writen(conn->fd, headers, strlen(headers));
+    rio_writen(conn->fd, srcp, filesize);
     if (munmap(srcp, filesize) < 0) {
-        err_sys("[vn_handle_get_event] munmap error");
+        err_sys("[vn_handle_get_connection] munmap error");
     }
 
     /* 
@@ -377,11 +390,11 @@ void vn_handle_get_event(vn_http_event *event) {
      */
     if (VN_CONN_KEEP_ALIVE == conn_flag) {
         /* Restart timer */
-        vn_event_add_timer(event, VN_DEFAULT_TIMEOUT);
-        /* Reset HTTP event */
-        vn_reset_http_event(event);
+        vn_event_add_timer(conn, VN_DEFAULT_TIMEOUT);
+        /* Reset HTTP connection */
+        vn_reset_http_connection(conn);
     } else {
-        vn_close_http_event((void *) event);
+        vn_close_http_connection((void *) conn);
     }
 
 }

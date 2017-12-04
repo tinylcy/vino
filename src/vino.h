@@ -28,12 +28,12 @@
  * Check whether the HTTP request message is fully buffered.
  * If true, call the corresponding method to deal with.
  */ 
-void vn_handle_http_event(vn_http_event *event);
+void vn_handle_http_connection(vn_http_connection *conn);
 
 /*
  * Handle HTTP GET request.
  */
-void vn_handle_get_event(vn_http_event *event);
+void vn_handle_get_connection(vn_http_connection *conn);
 
 /* 
  * Create HTTP response header and store it into `headers`.
