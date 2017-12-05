@@ -67,10 +67,10 @@ void vn_event_expire_timers(void) {
         conn = (vn_http_connection *) node->data;
     
         if (conn->handler) {
-            (*conn->handler)(conn);
 #ifdef DEBUG
-            DEBUG_PRINT("The timer has invoked handler to close the connection, fd = %d", conn->fd);
+            DEBUG_PRINT("The timer has invoked handler to close the connection, [fd = %d]", conn->fd);
 #endif
+            (*conn->handler)(conn);
         }
         vn_pq_delete_min(&pq);
     }

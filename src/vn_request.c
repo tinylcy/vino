@@ -118,6 +118,11 @@ void vn_close_http_connection(void *connection) {
     if (close(conn->fd) < 0) {
         err_sys("[vn_close_http_connection] close error");
     }
+
+#ifdef DEBUG
+    DEBUG_PRINT("The connection has been closed, [fd = %d]", conn->fd);
+#endif
+
     vn_linked_list_free(&req.header_name_list);
     vn_linked_list_free(&req.header_value_list);
     if (!pq_node) { 
@@ -134,7 +139,4 @@ void vn_close_http_connection(void *connection) {
     }
     free(conn);
 
-#ifdef DEBUG
-    DEBUG_PRINT("The connection has been closed, fd = %d", conn->fd);
-#endif
 }
