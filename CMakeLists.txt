@@ -6,6 +6,10 @@ set(CMAKE_C_FILES "-Wall")
 
 file(GLOB SRCS src/*.c)
 
+if (CMAKE_BUILD_TYPE STREQUAL Debug)
+    add_definitions(-DDEBUG)
+endif()
+
 add_executable(vino ${SRCS})
 
 

@@ -133,4 +133,8 @@ void vn_close_http_connection(void *connection) {
         }
     }
     free(conn);
+
+#ifdef DEBUG
+    DEBUG_PRINT("The connection has been closed, fd = %d", conn->fd);
+#endif
 }

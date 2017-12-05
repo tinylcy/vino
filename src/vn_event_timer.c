@@ -68,6 +68,9 @@ void vn_event_expire_timers(void) {
     
         if (conn->handler) {
             (*conn->handler)(conn);
+#ifdef DEBUG
+            DEBUG_PRINT("The timer has invoked handler to close the connection, fd = %d", conn->fd);
+#endif
         }
         vn_pq_delete_min(&pq);
     }

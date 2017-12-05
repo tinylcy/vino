@@ -9,6 +9,9 @@
 #define VN_WARN    "WARN"
 #define VN_INFO    "INFO"
 
+#define DEBUG_PRINT(fmt, args...) fprintf(stderr, "DEBUG: %s:%d:%s(): " fmt".\n", \
+    __FILE__, __LINE__, __func__, ##args)
+
 void vn_log_error(const char *fmt, ...);
 
 void vn_log_warn(const char *fmt, ...);

@@ -175,6 +175,10 @@ int main(int argc, char *argv[]) {
                 while (VN_ACCEPT) {
                     clientlen = sizeof(struct sockaddr_storage);                
                     connfd = accept(listenfd, (struct sockaddr *) &clientaddr, &clientlen);
+
+#ifdef DEBUG
+                    DEBUG_PRINT("Accept new incoming connection, fd = %d", connfd);
+#endif
                     
                     if (connfd < 0) {
                         if (errno == EINTR) {
@@ -203,6 +207,10 @@ int main(int argc, char *argv[]) {
                     vn_epoll_add(epfd, connfd, &new_ep_ev);
 
                     vn_event_add_timer(new_conn, VN_DEFAULT_TIMEOUT);
+
+#ifdef DEBUG
+                    DEBUG_PRINT("A new connection has been add to timer, fd = %d", connfd);
+#endif
                     
                 }
             /* End of fd == listenfd */
@@ -230,6 +238,10 @@ void vn_handle_read_event(vn_http_connection *conn) {
 
     while (VN_KEEP_READING) {
         nread = read(conn->fd, conn->req_buf_ptr, conn->remain_size);
+    
+#ifdef DEBUG
+        DEBUG_PRINT("Read HTTP request message from connection [fd = %d], nread = %d", conn->fd, nread);
+#endif
 
         /* End of file, the remote has closed the connection. */
         if (0 == nread) {
@@ -266,6 +278,9 @@ void vn_handle_read_event(vn_http_connection *conn) {
             continue;
         } else {
             req_line_completed = VN_OK;
+#ifdef DEBUG
+            DEBUG_PRINT("The HTTP request line has been successfully parsed, fd = %d", conn->fd);
+#endif
         }
 
         while (VN_KEEP_PARSING) {
@@ -282,6 +297,9 @@ void vn_handle_read_event(vn_http_connection *conn) {
                 break;
             } else if (rv == VN_OK) {
                 req_headers_completed = VN_OK;
+#ifdef DEBUG
+            DEBUG_PRINT("The HTTP request headers have been successfully parsed, fd = %d", conn->fd);
+#endif
                 break;
             }
         }
@@ -313,7 +331,9 @@ void vn_handle_write_event(vn_http_connection *conn) {
     /* Send HTTP response headers (include response line) */
     while (VN_KEEP_WRITING) {
         if ((nwritten = write(conn->fd, conn->resp_headers_ptr, conn->resp_headers_left)) < 0) {
-            // printf("headers nwritten = %ld\n", nwritten);
+#ifdef DEBUG
+            DEBUG_PRINT("Write HTTP response headers to the remote, nwritten = %ld, fd = %d", nwritten, conn->fd);
+#endif
             if (errno == EINTR) {
                 continue;
             } if (errno == EAGAIN || errno == EWOULDBLOCK) {
@@ -323,7 +343,9 @@ void vn_handle_write_event(vn_http_connection *conn) {
             }
         }
 
-        // printf("headers nwritten = %ld\n", nwritten);
+#ifdef DEBUG
+            DEBUG_PRINT("Write HTTP response headers to the remote, nwritten = %ld, fd = %d", nwritten, conn->fd);
+#endif
 
         if (nwritten == 0) {
             break;
@@ -336,7 +358,9 @@ void vn_handle_write_event(vn_http_connection *conn) {
     /* Send HTTP response body */
     while (VN_KEEP_WRITING) {
         if ((nwritten = write(conn->fd, conn->resp_body_ptr, conn->resp_body_left)) < 0) {
-            // printf("body nwritten = %ld\n", nwritten);
+#ifdef DEBUG
+            DEBUG_PRINT("Write HTTP response body to the remote, nwritten = %ld, fd = %d", nwritten, conn->fd);
+#endif 
             if (errno == EINTR) {
                 continue;
             } if (errno == EAGAIN || errno == EWOULDBLOCK) {
@@ -346,7 +370,9 @@ void vn_handle_write_event(vn_http_connection *conn) {
             }
         }
 
-        // printf("body nwritten = %ld\n", nwritten);
+#ifdef DEBUG
+            DEBUG_PRINT("Write HTTP response body to the remote, nwritten = %ld, fd = %d", nwritten, conn->fd);
+#endif
 
         if (nwritten == 0) {
             if (munmap((void *) conn->resp_body, conn->resp_file_size) < 0) {
