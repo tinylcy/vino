@@ -160,9 +160,8 @@ int main(int argc, char *argv[]) {
             conn = (vn_http_connection *) events[i].data.ptr;
             fd = conn->fd;
 
-            if ((events[i].events & EPOLLERR) || (events[i].events & EPOLLHUP)
-                || !(events[i].events & EPOLLIN)) {
-                vn_log_warn("An error has occured on file descriptor [%d], or the socket is not ready for reading.", fd);
+            if (!((events[i].events & EPOLLIN) || (events[i].events & EPOLLOUT))) {
+                vn_log_warn("An error has occured on file descriptor [%d], or the socket is not ready for reading or writing.", fd);
                 vn_pq_delete_node(conn->pq_node);
                 vn_close_http_connection(events[i].data.ptr);
                 continue;
@@ -199,7 +198,7 @@ int main(int argc, char *argv[]) {
                     }
 
                     vn_init_http_connection(new_conn, connfd, epfd);
-                    new_ep_ev.events = EPOLLIN | EPOLLET;
+                    new_ep_ev.events = EPOLLIN | EPOLLOUT | EPOLLET;
                     new_ep_ev.data.ptr = (void *) new_conn;
                     vn_epoll_add(epfd, connfd, &new_ep_ev);
 
@@ -209,7 +208,7 @@ int main(int argc, char *argv[]) {
             /* End of fd == listenfd */
 
             } else {
-                vn_handle_http_connection((vn_http_connection *) events[i].data.ptr);
+                vn_handle_http_connection(events[i].events, (vn_http_connection *) events[i].data.ptr);
             }
         }
     }
@@ -217,12 +216,20 @@ int main(int argc, char *argv[]) {
     return 0;
 }
 
-void vn_handle_http_connection(vn_http_connection *conn) {
+void vn_handle_http_connection(uint32_t events, vn_http_connection *conn) {
+    if (events & EPOLLIN) {
+        vn_handle_read_event(conn);
+    } else if(events & EPOLLOUT) {
+        vn_handle_write_event(conn);
+    }
+}
+
+void vn_handle_read_event(vn_http_connection *conn) {
     int nread, buf_len;
     int rv, req_line_completed, req_headers_completed;
 
     while (VN_KEEP_READING) {
-        nread = read(conn->fd, conn->bufptr, conn->remain_size);
+        nread = read(conn->fd, conn->req_buf_ptr, conn->remain_size);
 
         /* End of file, the remote has closed the connection. */
         if (0 == nread) {
@@ -234,16 +241,16 @@ void vn_handle_http_connection(vn_http_connection *conn) {
             if (errno == EINTR) {
                 continue;
             } if (errno != EAGAIN && errno != EWOULDBLOCK) {
-                err_sys("[vn_handle_http_connection] rio_readn error");
+                err_sys("[vn_handle_read_event] rio_readn error");
             }
             break;
         }
 
-        conn->bufptr += nread;
+        conn->req_buf_ptr += nread;
         conn->request.last += nread;     /* Update the last character parser can read */
         conn->remain_size -= nread;
 
-        rv = vn_http_parse_request_line(&conn->request, conn->buf);
+        rv = vn_http_parse_request_line(&conn->request, conn->req_buf);
         if (rv < 0) {
             /* 
              * Before closing the illegal connection, the corresponding
@@ -262,7 +269,7 @@ void vn_handle_http_connection(vn_http_connection *conn) {
         }
 
         while (VN_KEEP_PARSING) {
-            rv = vn_http_parse_header_line(&conn->request, conn->buf);
+            rv = vn_http_parse_header_line(&conn->request, conn->req_buf);
             if (rv < 0) {
                 vn_pq_delete_node(conn->pq_node);
                 vn_close_http_connection((void *) conn);
@@ -293,6 +300,77 @@ void vn_handle_http_connection(vn_http_connection *conn) {
         // TODO
     }
 
+}
+
+void vn_handle_write_event(vn_http_connection *conn) {
+    ssize_t nwritten;
+    int connection = VN_CONN_KEEP_ALIVE;
+
+    if (conn->resp_headers == NULL || conn->resp_body == NULL) {
+        return;
+    }
+
+    /* Send HTTP response headers (include response line) */
+    while (VN_KEEP_WRITING) {
+        if ((nwritten = write(conn->fd, conn->resp_headers_ptr, conn->resp_headers_left)) < 0) {
+            // printf("headers nwritten = %ld\n", nwritten);
+            if (errno == EINTR) {
+                continue;
+            } if (errno == EAGAIN || errno == EWOULDBLOCK) {
+                return;
+            } else {
+                err_sys("[vn_handle_write_event] write HTTP response headers error");
+            }
+        }
+
+        // printf("headers nwritten = %ld\n", nwritten);
+
+        if (nwritten == 0) {
+            break;
+        }
+
+        conn->resp_headers_ptr += nwritten;
+        conn->resp_headers_left -= nwritten;
+    }
+
+    /* Send HTTP response body */
+    while (VN_KEEP_WRITING) {
+        if ((nwritten = write(conn->fd, conn->resp_body_ptr, conn->resp_body_left)) < 0) {
+            // printf("body nwritten = %ld\n", nwritten);
+            if (errno == EINTR) {
+                continue;
+            } if (errno == EAGAIN || errno == EWOULDBLOCK) {
+                return;
+            } else {
+                err_sys("[vn_handle_write_event] write HTTP response body error");
+            }
+        }
+
+        // printf("body nwritten = %ld\n", nwritten);
+
+        if (nwritten == 0) {
+            if (munmap((void *) conn->resp_body, conn->resp_file_size) < 0) {
+                err_sys("[vn_handle_write_event] munmap error");
+            }
+            break;
+        }
+
+        conn->resp_body_ptr += nwritten;
+        conn->resp_body_left -= nwritten;
+    }
+
+    /* 
+     * If persistent connection flag (Connection: keep-alive) is set,
+     * several connections will share the same buffer, therefore unparsed
+     * data in buffer should be moved to the beginning of buffer.
+     */
+    if (conn->keep_alive == VN_CONN_KEEP_ALIVE) {
+        vn_event_add_timer(conn, VN_DEFAULT_TIMEOUT);     /* Restart timer */
+        vn_reset_http_connection(conn);                   /* Reset connection, the RESET operations only reset buffer area */
+    } else if (conn->resp_body_left == 0){
+        vn_close_http_connection((void *) conn);         
+    }
+    
 }
 
 void vn_handle_get_connection(vn_http_connection *conn) {
@@ -328,15 +406,16 @@ void vn_handle_get_connection(vn_http_connection *conn) {
     char headers[VN_HEADERS_SIZE], body[VN_BODY_SIZE];
     int srcfd;
     void *srcp;
-    unsigned int filesize;
+    unsigned int file_size;
     char mime_type[VN_FILETYPE_SIZE];
     vn_str *conn_str;
-    short conn_flag;
+    ssize_t nwritten;
+    size_t headers_len;
     
-    // TODO: nwrite = rio_writen(fd, buf, size); Check if `nwrite` == `size`.
     if (vn_check_file_exist(filepath) < 0) {
         vn_build_resp_404_body(body, uri);
         vn_build_resp_headers(headers, 404, "Not Found", "text/html", strlen(body), VN_CONN_CLOSE);
+        // TODO: using vn_handle_write_event
         rio_writen(conn->fd, (void *) headers, strlen(headers));
         rio_writen(conn->fd, (void *) body, strlen(body));
         vn_close_http_connection((void *) conn);
@@ -346,6 +425,7 @@ void vn_handle_get_connection(vn_http_connection *conn) {
     if (vn_check_read_permission(filepath) < 0) {
         vn_build_resp_403_body(body, uri);
         vn_build_resp_headers(headers, 403, "Forbidden", "text/html", strlen(body), VN_CONN_CLOSE);
+        // TODO: using vn_handle_write_event
         rio_writen(conn->fd, (void *) headers, strlen(headers));
         rio_writen(conn->fd, (void *) body, strlen(body));
         vn_close_http_connection((void *) conn);
@@ -355,12 +435,13 @@ void vn_handle_get_connection(vn_http_connection *conn) {
     if ((srcfd = open(filepath, O_RDONLY, 0)) < 0) {
         err_sys("[vn_handle_get_connection] open error");
     }
-    filesize = vn_get_filesize(filepath);
+    file_size = vn_get_filesize(filepath);
     /* Map the target file into memory */
-    if ((srcp = mmap(NULL, filesize, PROT_READ, MAP_PRIVATE, srcfd, 0)) == MAP_FAILED) {
+    if ((srcp = mmap(NULL, file_size, PROT_READ, MAP_PRIVATE, srcfd, 0)) == MAP_FAILED) {
         vn_log_warn("Call mmap error, filepath = %s\n", filepath);
         err_sys("[vn_handle_get_connection] mmap error");
     }
+    // vn_log_info("Mmap file success, filepath = %s", filepath);
     if (close(srcfd) < 0) {
         err_sys("[vn_handle_get_connection] close srcfd error");
     }
@@ -369,33 +450,27 @@ void vn_handle_get_connection(vn_http_connection *conn) {
     vn_get_mime_type(filepath, mime_type);
     conn_str = vn_get_http_header(req, "Connection");
     if (NULL != conn_str && (!vn_str_cmp(conn_str, "keep-alive") || !vn_str_cmp(conn_str, "Keep-Alive"))) {
-        vn_build_resp_headers(headers, 200, "OK", mime_type, filesize, VN_CONN_KEEP_ALIVE);
-        conn_flag = VN_CONN_KEEP_ALIVE;
+        vn_build_resp_headers(headers, 200, "OK", mime_type, file_size, VN_CONN_KEEP_ALIVE);
+        conn->keep_alive = VN_CONN_KEEP_ALIVE;
     } else {
-        vn_build_resp_headers(headers, 200, "OK", mime_type, filesize, VN_CONN_CLOSE);
-        conn_flag = VN_CONN_CLOSE;
+        vn_build_resp_headers(headers, 200, "OK", mime_type, file_size, VN_CONN_CLOSE);
+        conn->keep_alive = VN_CONN_CLOSE;
     }
 
-    /* Send response */
-    rio_writen(conn->fd, headers, strlen(headers));
-    rio_writen(conn->fd, srcp, filesize);
-    if (munmap(srcp, filesize) < 0) {
-        err_sys("[vn_handle_get_connection] munmap error");
+    /* Allocate HTTP response buffer */
+    headers_len = strlen(headers);
+    if ((conn->resp_headers = (char *) malloc(sizeof(char) * headers_len)) == NULL) {
+        err_sys("[vn_handle_get_connection] malloc response headers buffer error");
     }
-
-    /* 
-     * If persistent connection flag (Connection: keep-alive) is set,
-     * several connections will share the same buffer, therefore unparsed
-     * data in buffer should be moved to the beginning of buffer.
-     */
-    if (VN_CONN_KEEP_ALIVE == conn_flag) {
-        /* Restart timer */
-        vn_event_add_timer(conn, VN_DEFAULT_TIMEOUT);
-        /* Reset HTTP connection */
-        vn_reset_http_connection(conn);
-    } else {
-        vn_close_http_connection((void *) conn);
-    }
+    strncpy(conn->resp_headers, headers, headers_len);
+    conn->resp_headers_ptr = conn->resp_headers;
+    conn->resp_headers_left = headers_len;
+    conn->resp_body = (char *) srcp;
+    conn->resp_body_ptr = conn->resp_body;
+    conn->resp_body_left = conn->resp_file_size = file_size;
+    
+    /* Send HTTP response */
+    vn_handle_write_event(conn);
 
 }
 

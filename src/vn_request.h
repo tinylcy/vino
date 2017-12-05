@@ -18,9 +18,10 @@
 /* HTTP request message */
 typedef struct vn_http_request_s {
 
-    unsigned int state;
-    const char *pos;
-    const char *last;
+    /* HTTP parser state */
+    unsigned int    state;
+    const char     *pos;
+    const char     *last;
 
     /* HTTP request line */
     vn_str method;  /* "GET" */
@@ -32,14 +33,14 @@ typedef struct vn_http_request_s {
      *     GET /vino/index.html?param1=value1&param2=value2
      *         |      uri      |       query-string       |
      */
-    vn_str         query_string;
+    vn_str          query_string;
 
     /* HTTP request headers */
-    unsigned short header_cnt;
+    unsigned short  header_cnt;
     const char     *header_name_start, *header_value_start;
-    int            header_name_len, header_value_len;
-    vn_linked_list header_name_list;
-    vn_linked_list header_value_list;
+    int             header_name_len, header_value_len;
+    vn_linked_list  header_name_list;
+    vn_linked_list  header_value_list;
 
     /* HTTP body */
     vn_str         body;
@@ -50,13 +51,28 @@ typedef void (*timeout_handler)(void *);
 
 /* HTTP request connection */
 typedef struct vn_http_connection_s {
-    int                     fd;
-    int                     epfd;
-    char                    buf[VN_BUFSIZE];
-    char                    *bufptr;
-    size_t                  remain_size;
-    vn_http_request         request;
-    timeout_handler         handler;
+    int                      fd;
+    int                      epfd;
+
+    /* HTTP request buffer */
+    char                     req_buf[VN_BUFSIZE];
+    char                    *req_buf_ptr;
+    size_t                   remain_size;
+
+    /* HTTP response buffer */
+    char                    *resp_headers;            /* HTTP response headers (include response line) buffer (heap memory) */
+    char                    *resp_headers_ptr;        /* Point to the next byte to be sent */
+    size_t                   resp_headers_left;       /* Number of bytes left to be sent */
+    char                    *resp_body;               /* HTTP response body buffer (mmap memory) */
+    char                    *resp_body_ptr;           /* Point to the next byte to be sent */     
+    size_t                   resp_body_left;          /* Number of bytes left to be sent */ 
+    size_t                   resp_file_size;          /* The size of the mapped file */  
+    int                      resp_mem_type;           /* The type of memory allocation, malloc or mmap */
+
+    int                      keep_alive;
+
+    vn_http_request          request;
+    timeout_handler          handler;
     vn_priority_queue_node  *pq_node;
 } vn_http_connection;
 
@@ -85,8 +101,8 @@ vn_str *vn_get_http_header(vn_http_request *req, const char *name);
 
 /*
  * Close the connection, don't forget to cast the
- * type of `conn` to (vn_http_connection *).
+ * type of `connection` to (vn_http_connection *).
  */
-void vn_close_http_connection(void *conn);
+void vn_close_http_connection(void *connection);
 
 #endif /* VINO_VN_REQUEST_H */

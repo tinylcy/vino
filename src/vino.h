@@ -5,6 +5,7 @@
 #ifndef VINO_VN_VINO_H
 #define VINO_VN_VINO_H
 
+#include <sys/epoll.h>
 #include "vn_request.h"
 
 #define VINO_VERSION      "2.0"
@@ -12,6 +13,7 @@
 #define VN_RUNNING        1
 #define VN_ACCEPT         1
 #define VN_KEEP_READING   1
+#define VN_KEEP_WRITING   1
 #define VN_KEEP_PARSING   1
 
 #define VN_HEADERS_SIZE              4096
@@ -25,10 +27,22 @@
 #define VN_CONN_CLOSE                0 
 
 /*
- * Check whether the HTTP request message is fully buffered.
- * If true, call the corresponding method to deal with.
+ * Check the connection is currently readable or writeable.
  */ 
-void vn_handle_http_connection(vn_http_connection *conn);
+void vn_handle_http_connection(uint32_t events, vn_http_connection *conn);
+
+/*
+ * If the connection is currently readbale, read the HTTP request message
+ * into connection buffer, and parse it. If the buffer is parsed successfully,
+ * send the response to remote (call vn_handle_write_event).
+ */
+void vn_handle_read_event(vn_http_connection *conn);
+
+/*
+ * If the connection is currently writeable, send the buffered data
+ * to the remote. 
+ */
+void vn_handle_write_event(vn_http_connection *conn);
 
 /*
  * Handle HTTP GET request.

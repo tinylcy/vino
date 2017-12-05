@@ -7,6 +7,7 @@
 #include <unistd.h>
 #include <string.h>
 #include <ctype.h>
+#include <sys/mman.h>
 #include "vn_request.h"
 #include "vn_linked_list.h"
 #include "vn_priority_queue.h"
@@ -38,29 +39,44 @@ void vn_init_http_connection(vn_http_connection *conn, int fd, int epfd) {
     conn->epfd = epfd;
 
     /* Initialize buffer */
-    memset(conn->buf, '\0', VN_BUFSIZE);
-    conn->bufptr = conn->buf;
+    memset(conn->req_buf, '\0', VN_BUFSIZE);
+    conn->req_buf_ptr = conn->req_buf;
     conn->remain_size = VN_BUFSIZE;
 
     vn_init_http_request(&conn->request);
     /* Initialize HTTP request parser state */
-    conn->request.pos = conn->request.last = conn->buf;
+    conn->request.pos = conn->request.last = conn->req_buf;
+
+    /* Initialize HTTP response buffer */
+    conn->resp_headers = conn->resp_headers_ptr = NULL;
+    conn->resp_headers_left = 0;
+    conn->resp_body = conn->resp_body_ptr = NULL;
+    conn->resp_body_left = conn->resp_file_size = 0;
 
     conn->handler = vn_close_http_connection;
     conn->pq_node = NULL;
 }
 
 void vn_reset_http_connection(vn_http_connection *conn) {
-    /* Reset buffer */
-    memset(conn->buf, '\0', VN_BUFSIZE);
-    conn->bufptr = conn->buf;
+    /* Reset HTTP request buffer */
+    memset(conn->req_buf, '\0', VN_BUFSIZE);
+    conn->req_buf_ptr = conn->req_buf;
     conn->remain_size = VN_BUFSIZE;
 
     vn_init_http_request(&conn->request);
     /* Reset HTTP request parser state */
-    conn->request.pos = conn->request.last = conn->buf;
+    conn->request.pos = conn->request.last = conn->req_buf;
 
-    conn->handler = vn_close_http_connection;  
+    /* Reset HTTP response buffer */
+    free(conn->resp_headers);
+    conn->resp_headers = conn->resp_headers_ptr = NULL;
+    conn->resp_headers_left = 0;
+    conn->resp_body = conn->resp_body_ptr = NULL;
+    conn->resp_body_left = conn->resp_file_size = 0;
+
+    conn->handler = vn_close_http_connection; 
+
+    /* Be careful: the `pq_node` shouldn't be reset to NULL */ 
 }
 
 vn_str *vn_get_http_header(vn_http_request *req, const char *name) {
@@ -90,16 +106,31 @@ vn_str *vn_get_http_header(vn_http_request *req, const char *name) {
     return NULL;
 }
 
-void vn_close_http_connection(void *conn) {
-    vn_http_connection *connection = (vn_http_connection *) conn;
-    vn_http_request req = connection->request;
-    vn_priority_queue_node *pq_node = connection->pq_node;
+void vn_close_http_connection(void *connection) {
+    vn_http_connection *conn;
+    vn_http_request req;
+    vn_priority_queue_node *pq_node;
 
-    if (close(connection->fd) < 0) {
+    conn = (vn_http_connection *) connection;
+    req = conn->request;
+    pq_node = conn->pq_node;
+
+    if (close(conn->fd) < 0) {
         err_sys("[vn_close_http_connection] close error");
     }
     vn_linked_list_free(&req.header_name_list);
     vn_linked_list_free(&req.header_value_list);
-    pq_node->data = NULL;
-    free(connection);
+    if (!pq_node) { 
+        vn_log_warn("The connection has no corresponding node in priority queue.");
+    } else {
+        pq_node->data = NULL;
+    }
+
+    free(conn->resp_headers);
+    if (conn->resp_body && conn->resp_file_size > 0) {
+        if (munmap(conn->resp_body, conn->resp_file_size) < 0) {
+            err_sys("[vn_close_http_connection] munmap error");
+        }
+    }
+    free(conn);
 }
