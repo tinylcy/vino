@@ -28,6 +28,7 @@
 #include "vn_error.h"
 
 static char *port = VN_PORT;
+static int   keep_alive_g = VN_CONN_KEEP_ALIVE;    /* Global Keep-Alive flag, which is on by default */
 
 static const struct option long_options[] = {
     { "port", required_argument, NULL, 'p' },
@@ -40,26 +41,43 @@ static void vn_usage(char *program) {
     fprintf(stderr,
             "Usage: %s [option]\n"
             "Options are:\n"
-            "    -p|--port <port>   Specify port for Vino. Default 8080.\n"
-            "    -h|--help          This information.\n"
-            "    -V|--version       Display program version.\n",
+            "    -p|--port <port>    Specify port for Vino. 8080 is the default port.\n"
+            "    -h|--help           This information.\n"
+            "    -V|--version        Display program version.\n"
+            "    -k  <on|off>        Use HTTP Keep-Alive featue or not. Keep-Alive is on by default.\n",
             program
     );
 }
 
 static void vn_parse_options(int argc, char *argv[]) {
-    int opt = 0;
-    int options_index = 0;
+    int opt;
+    int options_index;
+    size_t optarg_len;
 
     if (1 == argc) {
         return;
     }
 
-    while ((opt = getopt_long(argc, argv, "Vp:?h", long_options, &options_index)) != EOF) {
+    while ((opt = getopt_long(argc, argv, "Vp:k:?h", long_options, &options_index)) != EOF) {
         switch (opt) {
             case  0 : break;
             case 'p': port = optarg; break;
             case 'V': printf(VINO_VERSION"\n"); exit(0);
+            case 'k': 
+                optarg_len = strlen(optarg);
+                if (optarg_len != 2 && optarg_len != 3) {
+                    fprintf(stderr, "Error in option -%c: Illegal argument %s.\n", opt, optarg);
+                    exit(-1);
+                }
+                if (!strcasecmp(optarg, "on")) {
+                    keep_alive_g = VN_CONN_KEEP_ALIVE;
+                } else if (!strcasecmp(optarg, "off")) {
+                    keep_alive_g = VN_CONN_CLOSE;
+                } else {
+                    fprintf(stderr, "Error in option -%c: Illegal argument %s.\n", opt, optarg);
+                    exit(-1);
+                }
+                break;
             case 'h':
             case '?': vn_usage(argv[0]); exit(0);
             default : break;
@@ -387,8 +405,8 @@ void vn_handle_write_event(vn_http_connection *conn) {
 
     /* 
      * If persistent connection flag (Connection: keep-alive) is set,
-     * several connections will share the same buffer, therefore unparsed
-     * data in buffer should be moved to the beginning of buffer.
+     * several connections will share the same buffer, therefore after finishing
+     * one HTTP request the buffer should be reset.
      */
     if (conn->keep_alive == VN_CONN_KEEP_ALIVE) {
         vn_event_add_timer(conn, VN_DEFAULT_TIMEOUT);     /* Restart timer */
@@ -477,7 +495,7 @@ void vn_handle_get_connection(vn_http_connection *conn) {
     conn_str = vn_get_http_header(req, "Connection");
     if (NULL != conn_str && (!vn_str_cmp(conn_str, "keep-alive") || !vn_str_cmp(conn_str, "Keep-Alive"))) {
         vn_build_resp_headers(headers, 200, "OK", mime_type, file_size, VN_CONN_KEEP_ALIVE);
-        conn->keep_alive = VN_CONN_KEEP_ALIVE;
+        conn->keep_alive = (keep_alive_g == VN_CONN_CLOSE) ? VN_CONN_CLOSE : VN_CONN_KEEP_ALIVE;
     } else {
         vn_build_resp_headers(headers, 200, "OK", mime_type, file_size, VN_CONN_CLOSE);
         conn->keep_alive = VN_CONN_CLOSE;

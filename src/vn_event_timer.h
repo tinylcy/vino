@@ -9,7 +9,7 @@
 #include "vn_request.h"
 #include "vn_priority_queue.h"
 
-#define VN_DEFAULT_TIMEOUT  2000    /* ms */
+#define VN_DEFAULT_TIMEOUT  500    /* ms */
 
 typedef time_t        vn_sec_t;    /* Seconds */
 typedef unsigned long vn_msec_t;   /* Milliseconds */
