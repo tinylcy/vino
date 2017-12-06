@@ -14,6 +14,8 @@ cmake .. && make
 ./vino
 ```
 
+If you want to build for debug and print debug information when compiling, use `cmake -DCMAKE_BUILD_TYPE=Debug <path>`. If you want to enable profiling, you can use `cmake -DCMAKE_C_FLAGS=-pg <path>`.
+
 By default the server accepts connections on port 8080, if you want to assign other port for the server, run it as `./vino -p|--port <port>`. For more options, please type `./vino -h|--help` into terminal.
 
 ## Features
