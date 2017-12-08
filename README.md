@@ -21,9 +21,10 @@ By default the server accepts connections on port 8080, if you want to assign ot
 ## Features
 
 - [x] Single-threaded, non-blocking I/O based on event-driven model
-- [x] A timer for executing the handler after having waited the specified number of milliseconds
 - [x] HTTP persistent connection (HTTP Keep-Alive)
+- [x] A timer for executing the handler after having waited the specified number of milliseconds
 - [x] A parser for extracting request line and headers from HTTP request message
+- [x] A unified memory pool
 - [x] HTTP GET method
 
 ## Performance 
