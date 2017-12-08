@@ -5,6 +5,7 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include "vn_linked_list.h"
+#include "vn_palloc.h"
 #include "vn_error.h"
 
 void vn_linked_list_init(vn_linked_list *list) {

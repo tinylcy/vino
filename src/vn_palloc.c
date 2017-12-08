@@ -159,22 +159,22 @@ static void *vn_palloc_large(vn_pool_t *pool, size_t size) {
     return p;
 }
 
-// void vn_print_pool(vn_pool_t *pool) {
-//     vn_pool_data_t data;
-//     vn_pool_large_t *l;
-//     vn_pool_t *p;
-//     int i;
+void vn_print_pool(vn_pool_t *pool) {
+    vn_pool_data_t data;
+    vn_pool_large_t *l;
+    vn_pool_t *p;
+    int i;
 
-//     i = 0;
-//     for (p = pool; p; p = p->data.next) {
-//         printf("pool = %p, data = %ld, remain = %ld, failed = %d\n", 
-//         p,  
-//         p->data.last - (char *) p - sizeof(vn_pool_t), 
-//         p->data.end - p->data.last, 
-//         p->data.failed);
-//     }
+    i = 0;
+    for (p = pool; p; p = p->data.next) {
+        printf("pool = %p, data = %ld, remain = %ld, failed = %d\n", 
+        p,  
+        p->data.last - (char *) p - sizeof(vn_pool_t), 
+        p->data.end - p->data.last, 
+        p->data.failed);
+    }
 
-//     for (l = pool->large; l; l = l->next) {
-//         printf("alloc: %p\n", l->alloc);
-//     }
-// }
+    for (l = pool->large; l; l = l->next) {
+        printf("alloc: %p\n", l->alloc);
+    }
+}

@@ -8,6 +8,7 @@
 #include <stdio.h>
 #include "vn_priority_queue.h"
 #include "vn_linked_list.h"
+#include "vn_palloc.h"
 #include "util.h"
 
 #define VN_BUFSIZE                8192
@@ -53,6 +54,7 @@ typedef void (*timeout_handler)(void *);
 typedef struct vn_http_connection_s {
     int                      fd;
     int                      epfd;
+    vn_pool_t               *pool;
 
     /* HTTP request buffer */
     char                     req_buf[VN_BUFSIZE];

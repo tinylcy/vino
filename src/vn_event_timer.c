@@ -6,6 +6,7 @@
 #include <sys/time.h>
 #include "vn_event_timer.h"
 #include "vn_priority_queue.h"
+#include "vn_palloc.h"
 #include "vn_logger.h"
 #include "vn_error.h"
 
@@ -80,8 +81,8 @@ void vn_event_add_timer(vn_http_connection *conn, vn_msec_t timer) {
     vn_priority_queue_node *node;
     vn_msec_t key;
 
-    if ((node = (vn_priority_queue_node *) malloc(sizeof(vn_priority_queue_node))) == NULL) {
-        err_sys("[vn_event_add_timer] malloc error");
+    if ((node = (vn_priority_queue_node *) vn_palloc(conn->pool, sizeof(vn_priority_queue_node))) == NULL) {
+        err_sys("[vn_event_add_timer] vn_palloc error");
     }
 
     vn_event_time_update();

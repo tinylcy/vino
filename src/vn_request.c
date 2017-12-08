@@ -37,6 +37,7 @@ void vn_init_http_request(vn_http_request *req) {
 void vn_init_http_connection(vn_http_connection *conn, int fd, int epfd) {
     conn->fd = fd;
     conn->epfd = epfd;
+    conn->pool = vn_create_pool(VN_DEFAULT_POOL_SIZE);
 
     /* Initialize buffer */
     memset(conn->req_buf, '\0', VN_BUFSIZE);
@@ -44,6 +45,7 @@ void vn_init_http_connection(vn_http_connection *conn, int fd, int epfd) {
     conn->remain_size = VN_BUFSIZE;
 
     vn_init_http_request(&conn->request);
+
     /* Initialize HTTP request parser state */
     conn->request.pos = conn->request.last = conn->req_buf;
 
@@ -58,17 +60,24 @@ void vn_init_http_connection(vn_http_connection *conn, int fd, int epfd) {
 }
 
 void vn_reset_http_connection(vn_http_connection *conn) {
+    vn_http_request *req;
+
     /* Reset HTTP request buffer */
     memset(conn->req_buf, '\0', VN_BUFSIZE);
     conn->req_buf_ptr = conn->req_buf;
     conn->remain_size = VN_BUFSIZE;
 
-    vn_init_http_request(&conn->request);
+    req = &conn->request;
+
+    vn_init_http_request(req);
     /* Reset HTTP request parser state */
-    conn->request.pos = conn->request.last = conn->req_buf;
+    req->state = 0;
+    req->pos = req->last = conn->req_buf;
 
     /* Reset HTTP response buffer */
-    free(conn->resp_headers);
+    vn_linked_list_free(&req->header_name_list);
+    vn_linked_list_free(&req->header_value_list);
+    
     conn->resp_headers = conn->resp_headers_ptr = NULL;
     conn->resp_headers_left = 0;
     conn->resp_body = conn->resp_body_ptr = NULL;
@@ -123,20 +132,20 @@ void vn_close_http_connection(void *connection) {
     DEBUG_PRINT("The connection has been closed, [fd = %d]", conn->fd);
 #endif
 
-    vn_linked_list_free(&req.header_name_list);
-    vn_linked_list_free(&req.header_value_list);
+    //vn_linked_list_free(&(req.header_name_list));
+    //vn_linked_list_free(&(req.header_value_list));
     if (!pq_node) { 
         vn_log_warn("The connection has no corresponding node in priority queue.");
     } else {
         pq_node->data = NULL;
     }
 
-    free(conn->resp_headers);
+    // free(conn->resp_headers);
     if (conn->resp_body && conn->resp_file_size > 0) {
         if (munmap(conn->resp_body, conn->resp_file_size) < 0) {
             err_sys("[vn_close_http_connection] munmap error");
         }
     }
-    free(conn);
+    //free(conn);
 
 }

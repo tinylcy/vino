@@ -280,7 +280,7 @@ void vn_handle_read_event(vn_http_connection *conn) {
         conn->request.last += nread;     /* Update the last character parser can read */
         conn->remain_size -= nread;
 
-        rv = vn_http_parse_request_line(&conn->request, conn->req_buf);
+        rv = vn_http_parse_request_line(conn, conn->req_buf);
         if (rv < 0) {
             /* 
              * Before closing the illegal connection, the corresponding
@@ -302,7 +302,7 @@ void vn_handle_read_event(vn_http_connection *conn) {
         }
 
         while (VN_KEEP_PARSING) {
-            rv = vn_http_parse_header_line(&conn->request, conn->req_buf);
+            rv = vn_http_parse_header_line(conn, conn->req_buf);
             if (rv < 0) {
                 vn_pq_delete_node(conn->pq_node);
                 vn_close_http_connection((void *) conn);
@@ -503,8 +503,8 @@ void vn_handle_get_connection(vn_http_connection *conn) {
 
     /* Allocate HTTP response buffer */
     headers_len = strlen(headers);
-    if ((conn->resp_headers = (char *) malloc(sizeof(char) * headers_len)) == NULL) {
-        err_sys("[vn_handle_get_connection] malloc response headers buffer error");
+    if ((conn->resp_headers = (char *) vn_palloc(conn->pool, sizeof(char) * headers_len)) == NULL) {
+        err_sys("[vn_handle_get_connection] vn_palloc response headers buffer error");
     }
     strncpy(conn->resp_headers, headers, headers_len);
     conn->resp_headers_ptr = conn->resp_headers;

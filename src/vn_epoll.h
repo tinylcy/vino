@@ -10,6 +10,7 @@
 #define VN_EPOLL_FLAGS   0
 #define VN_MAXEVENTS     1024
 
+// TODO: free events memory
 /* The events that will be available for caller */
 struct epoll_event *events;
 

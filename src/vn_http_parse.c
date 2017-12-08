@@ -6,6 +6,7 @@
 #include "vn_http_parse.h"
 #include "vn_request.h"
 #include "vn_linked_list.h"
+#include "vn_palloc.h"
 #include "util.h"
 #include "vn_error.h"
 
@@ -15,7 +16,8 @@
 #define vn_str4_cmp(m, c0, c1, c2, c3)                                \
     *((unsigned int *) m) == ((c3 << 24) | (c2 << 16) | (c1 << 8) | c0)
 
-int vn_http_parse_request_line(vn_http_request *hr, const char *buf) {
+int vn_http_parse_request_line(vn_http_connection *conn, const char *buf) {
+    vn_http_request *req;
     const char *p, *m;
     char ch;
 
@@ -40,9 +42,10 @@ int vn_http_parse_request_line(vn_http_request *hr, const char *buf) {
         sw_done
     } state;
 
-    state = hr->state;
+    req = &conn->request;
+    state = req->state;
 
-    for (p = hr->pos; p < hr->last; p++, hr->pos++) {
+    for (p = req->pos; p < req->last; p++, req->pos++) {
         ch = *p;
 
         switch (state) {
@@ -55,14 +58,14 @@ int vn_http_parse_request_line(vn_http_request *hr, const char *buf) {
             if (ch < 'A' || ch > 'Z') {
                 return VN_HTTP_PARSE_INVALID_METHOD;
             }
-            hr->method.p = p;
+            req->method.p = p;
             state = sw_method;
             break;
 
         case sw_method:
             if (ch == ' ') {
-                hr->method.len = p - hr->method.p;
-                m = hr->method.p;
+                req->method.len = p - req->method.p;
+                m = req->method.p;
 
                 switch (p - m) {
                 case 3:
@@ -88,7 +91,7 @@ int vn_http_parse_request_line(vn_http_request *hr, const char *buf) {
 
         case sw_space_before_uri:
             if (ch == '/') {
-                hr->uri.p = p;
+                req->uri.p = p;
                 state = sw_after_slash_in_uri;
                 break;
             }
@@ -97,11 +100,11 @@ int vn_http_parse_request_line(vn_http_request *hr, const char *buf) {
         case sw_after_slash_in_uri:
             switch (ch) {
             case ' ':
-                hr->uri.len = p - hr->uri.p;
+                req->uri.len = p - req->uri.p;
                 state = sw_space_before_version;
                 break;
             case '?':
-                hr->uri.len = p - hr->uri.p;
+                req->uri.len = p - req->uri.p;
                 state = sw_question_mark_before_query_string;
                 break;
             case '\0':
@@ -115,11 +118,11 @@ int vn_http_parse_request_line(vn_http_request *hr, const char *buf) {
         case sw_uri:
             switch (ch) {
             case ' ':
-                hr->uri.len = p - hr->uri.p;
+                req->uri.len = p - req->uri.p;
                 state = sw_space_before_version;
                 break;
             case '?':
-                hr->uri.len = p - hr->uri.p;
+                req->uri.len = p - req->uri.p;
                 state = sw_question_mark_before_query_string;
                 break;
             case '\0':
@@ -133,12 +136,12 @@ int vn_http_parse_request_line(vn_http_request *hr, const char *buf) {
         case sw_question_mark_before_query_string:
             switch (ch) {
             case ' ':
-                hr->query_string.p = NULL;
-                hr->query_string.len = 0;
+                req->query_string.p = NULL;
+                req->query_string.len = 0;
                 state = sw_space_before_version;
                 break;
             default:
-                hr->query_string.p = p;
+                req->query_string.p = p;
                 state = sw_query_string;
                 break;
             }
@@ -147,7 +150,7 @@ int vn_http_parse_request_line(vn_http_request *hr, const char *buf) {
         case sw_query_string:
             switch (ch) {
             case ' ':
-                hr->query_string.len = p - hr->query_string.p;
+                req->query_string.len = p - req->query_string.p;
                 state = sw_space_before_version;
                 break;
             default:
@@ -160,7 +163,7 @@ int vn_http_parse_request_line(vn_http_request *hr, const char *buf) {
             if (ch != 'H') {
                 return VN_HTTP_PARSE_INVALID_VERSION;
             }
-            hr->proto.p = p;
+            req->proto.p = p;
             state = sw_http_H;
             break;
         
@@ -218,15 +221,15 @@ int vn_http_parse_request_line(vn_http_request *hr, const char *buf) {
                 return VN_HTTP_PARSE_INVALID_VERSION;
             }
             state = sw_almost_done;
-            hr->proto.len = p - hr->proto.p;
+            req->proto.len = p - req->proto.p;
             break;
         
         case sw_almost_done:
             if (ch != '\n') {
                 return VN_HTTP_PARSE_INVALID_VERSION;
             }
-            hr->pos++;
-            hr->state = sw_start;
+            req->pos++;
+            req->state = sw_start;
             return VN_OK;
         }
             
@@ -235,7 +238,8 @@ int vn_http_parse_request_line(vn_http_request *hr, const char *buf) {
     return VN_AGAIN;
 }
 
-int vn_http_parse_header_line(vn_http_request *hr, const char *buf) {
+int vn_http_parse_header_line(vn_http_connection *conn, const char *buf) {
+    vn_http_request *req;
     const char *p;
     char ch;
     vn_str *name_str, *value_str;
@@ -251,9 +255,10 @@ int vn_http_parse_header_line(vn_http_request *hr, const char *buf) {
         sw_headers_almost_done
     } state;
 
-    state = sw_start;
+    req = &conn->request;
+    state = req->state;
 
-    for (p = hr->pos; p < hr->last; p++, hr->pos++) {
+    for (p = req->pos; p < req->last; p++, req->pos++) {
         ch = *p;
 
         switch (state) {
@@ -266,7 +271,7 @@ int vn_http_parse_header_line(vn_http_request *hr, const char *buf) {
             case '\0':
                 return VN_HTTP_PARSE_INVALID_HEADER;
             default:
-                hr->header_name_start = p;
+                req->header_name_start = p;
                 state = sw_name;
                 break;
             }
@@ -275,7 +280,7 @@ int vn_http_parse_header_line(vn_http_request *hr, const char *buf) {
         case sw_name:
             switch (ch) {
             case ':':
-                hr->header_name_len = p - hr->header_name_start;
+                req->header_name_len = p - req->header_name_start;
                 state = sw_colon_after_name;
                 break;
             case '\0':
@@ -306,7 +311,7 @@ int vn_http_parse_header_line(vn_http_request *hr, const char *buf) {
             case '\0':
                 return VN_HTTP_PARSE_INVALID_HEADER;
             default:
-                hr->header_value_start = p;
+                req->header_value_start = p;
                 state = sw_value;
                 break;
             }
@@ -315,11 +320,11 @@ int vn_http_parse_header_line(vn_http_request *hr, const char *buf) {
         case sw_value:
             switch (ch) {
             case CR:
-                hr->header_value_len = p - hr->header_value_start;
+                req->header_value_len = p - req->header_value_start;
                 state = sw_almost_done;
                 break;
             case ' ':
-                hr->header_value_len = p - hr->header_value_start;
+                req->header_value_len = p - req->header_value_start;
                 state = sw_space_after_value;
                 break;
             case '\0':
@@ -348,25 +353,25 @@ int vn_http_parse_header_line(vn_http_request *hr, const char *buf) {
         case sw_almost_done:
             switch (ch) {
             case LF:
-                hr->header_cnt += 1;
+                req->header_cnt += 1;
 
-                if ((name_str = (vn_str *) malloc(sizeof(vn_str))) == NULL ||
-                    (value_str = (vn_str *) malloc(sizeof(vn_str))) == NULL) {
-                    err_sys("[vn_http_parse_header_line] malloc error");
+                if ((name_str = (vn_str *) vn_palloc(conn->pool, sizeof(vn_str))) == NULL ||
+                    (value_str = (vn_str *) vn_palloc(conn->pool, sizeof(vn_str))) == NULL) {
+                    err_sys("[vn_http_parse_header_line] vn_palloc error");
                 }
-                name_str->p = hr->header_name_start;
-                name_str->len = hr->header_name_len;
-                value_str->p = hr->header_value_start;
-                value_str->len = hr->header_value_len;
+                name_str->p = req->header_name_start;
+                name_str->len = req->header_name_len;
+                value_str->p = req->header_value_start;
+                value_str->len = req->header_value_len;
                 
-                vn_linked_list_append(&hr->header_name_list, name_str);
-                vn_linked_list_append(&hr->header_value_list, value_str);
+                vn_linked_list_append(&req->header_name_list, name_str);
+                vn_linked_list_append(&req->header_value_list, value_str);
 
-                hr->header_name_start = hr->header_value_start = NULL;
-                hr->header_name_len = hr->header_value_len = 0;
+                req->header_name_start = req->header_value_start = NULL;
+                req->header_name_len = req->header_value_len = 0;
 
-                hr->state = sw_start;
-                hr->pos += 1;
+                req->state = sw_start;
+                req->pos += 1;
                 
                 return VN_HTTP_PARSE_HEADER_DONE;
             default:
@@ -378,8 +383,8 @@ int vn_http_parse_header_line(vn_http_request *hr, const char *buf) {
             if (ch != LF) {
                 return VN_HTTP_PARSE_INVALID_HEADER;
             }
-            hr->state = sw_start;
-            hr->pos += 1;
+            req->state = sw_start;
+            req->pos += 1;
             return VN_OK;
         }
     }

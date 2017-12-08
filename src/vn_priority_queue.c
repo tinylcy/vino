@@ -5,6 +5,7 @@
 #include <stdlib.h>
 #include <time.h>
 #include "vn_priority_queue.h"
+#include "vn_palloc.h"
 #include "vn_logger.h"
 #include "vn_error.h"
 
@@ -69,7 +70,7 @@ vn_priority_queue_node *vn_pq_min(vn_priority_queue *pq) {
 vn_priority_queue_node *vn_pq_delete_min(vn_priority_queue *pq) {
     vn_priority_queue_node *min = vn_pq_min(pq);
     vn_exch(pq, 1, pq->size--);
-    free(pq->nodes[pq->size + 1]);   /* Don't forget */
+    // free(pq->nodes[pq->size + 1]);   /* Don't forget */
     vn_sink(pq, 1);
     return min;
 }
