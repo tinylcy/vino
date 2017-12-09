@@ -15,7 +15,7 @@
 #include "util.h"
 #include "vn_error.h"
 
-void vn_init_http_request(vn_http_request *req) {
+void vn_init_http_request(vn_http_request_t *req) {
     /* Initialize HTTP parser (DFA) state */
     req->state = 0;
     req->pos = req->last = NULL;
@@ -34,7 +34,7 @@ void vn_init_http_request(vn_http_request *req) {
     vn_linked_list_init(&req->header_value_list);
 }
 
-void vn_init_http_connection(vn_http_connection *conn, int fd, int epfd) {
+void vn_init_http_connection(vn_http_connection_t *conn, int fd, int epfd) {
     conn->fd = fd;
     conn->epfd = epfd;
     conn->pool = vn_create_pool(VN_DEFAULT_POOL_SIZE);
@@ -59,8 +59,8 @@ void vn_init_http_connection(vn_http_connection *conn, int fd, int epfd) {
     conn->pq_node = NULL;
 }
 
-void vn_reset_http_connection(vn_http_connection *conn) {
-    vn_http_request *req;
+void vn_reset_http_connection(vn_http_connection_t *conn) {
+    vn_http_request_t *req;
 
     /* Reset HTTP request buffer */
     memset(conn->req_buf, '\0', VN_BUFSIZE);
@@ -88,7 +88,7 @@ void vn_reset_http_connection(vn_http_connection *conn) {
     /* Be careful: the `pq_node` shouldn't be reset to NULL */ 
 }
 
-vn_str *vn_get_http_header(vn_http_request *req, const char *name) {
+vn_str *vn_get_http_header(vn_http_request_t *req, const char *name) {
     int i;
     vn_str *name_str, *value_str;
     vn_linked_list *name_list, *value_list;
@@ -116,12 +116,10 @@ vn_str *vn_get_http_header(vn_http_request *req, const char *name) {
 }
 
 void vn_close_http_connection(void *connection) {
-    vn_http_connection *conn;
-    vn_http_request req;
+    vn_http_connection_t *conn;
     vn_priority_queue_node *pq_node;
 
-    conn = (vn_http_connection *) connection;
-    req = conn->request;
+    conn = (vn_http_connection_t *) connection;
     pq_node = conn->pq_node;
 
     if (close(conn->fd) < 0) {

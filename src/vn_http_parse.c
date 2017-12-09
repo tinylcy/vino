@@ -16,8 +16,8 @@
 #define vn_str4_cmp(m, c0, c1, c2, c3)                                \
     *((unsigned int *) m) == ((c3 << 24) | (c2 << 16) | (c1 << 8) | c0)
 
-int vn_http_parse_request_line(vn_http_connection *conn, const char *buf) {
-    vn_http_request *req;
+int vn_http_parse_request_line(vn_http_connection_t *conn, const char *buf) {
+    vn_http_request_t *req;
     const char *p, *m;
     char ch;
 
@@ -238,8 +238,8 @@ int vn_http_parse_request_line(vn_http_connection *conn, const char *buf) {
     return VN_AGAIN;
 }
 
-int vn_http_parse_header_line(vn_http_connection *conn, const char *buf) {
-    vn_http_request *req;
+int vn_http_parse_header_line(vn_http_connection_t *conn, const char *buf) {
+    vn_http_request_t *req;
     const char *p;
     char ch;
     vn_str *name_str, *value_str;

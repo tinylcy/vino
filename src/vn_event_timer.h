@@ -26,6 +26,6 @@ vn_msec_t vn_event_find_timer(void);
 
 void vn_event_expire_timers(void);
 
-void vn_event_add_timer(vn_http_connection *conn, vn_msec_t timer);
+void vn_event_add_timer(vn_http_connection_t *conn, vn_msec_t timer);
 
 #endif /* VINO_VN_EVENT_TIMER_H */

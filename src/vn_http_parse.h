@@ -21,8 +21,8 @@
 #define VN_HTTP_PARSE_HEADER_DONE        2
 #define VN_HTTP_PARSE_INVALID_HEADER    -5
 
-int vn_http_parse_request_line(vn_http_connection *conn, const char *buf);
+int vn_http_parse_request_line(vn_http_connection_t *conn, const char *buf);
 
-int vn_http_parse_header_line(vn_http_connection *conn, const char *buf);
+int vn_http_parse_header_line(vn_http_connection_t *conn, const char *buf);
 
 #endif /* VINO_VN_HTTP_PARSE_H */

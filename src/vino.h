@@ -29,25 +29,25 @@
 /*
  * Check the connection is currently readable or writeable.
  */ 
-void vn_handle_http_connection(uint32_t events, vn_http_connection *conn);
+void vn_handle_http_connection(uint32_t events, vn_http_connection_t *conn);
 
 /*
  * If the connection is currently readbale, read the HTTP request message
  * into connection buffer, and parse it. If the buffer is parsed successfully,
  * send the response to remote (call vn_handle_write_event).
  */
-void vn_handle_read_event(vn_http_connection *conn);
+void vn_handle_read_event(vn_http_connection_t *conn);
 
 /*
  * If the connection is currently writeable, send the buffered data
  * to the remote. 
  */
-void vn_handle_write_event(vn_http_connection *conn);
+void vn_handle_write_event(vn_http_connection_t *conn);
 
 /*
  * Handle HTTP GET request.
  */
-void vn_handle_get_connection(vn_http_connection *conn);
+void vn_handle_get_connection(vn_http_connection_t *conn);
 
 /* 
  * Create HTTP response header and store it into `headers`.

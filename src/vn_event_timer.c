@@ -47,7 +47,7 @@ vn_msec_t vn_event_find_timer(void) {
 
 void vn_event_expire_timers(void) {
     vn_priority_queue_node *node;
-    vn_http_connection *conn;
+    vn_http_connection_t *conn;
 
     while (!vn_pq_isempty(&pq)) {
         node = vn_pq_min(&pq);
@@ -65,7 +65,7 @@ void vn_event_expire_timers(void) {
             return;
         }
 
-        conn = (vn_http_connection *) node->data;
+        conn = (vn_http_connection_t *) node->data;
     
         if (conn->handler) {
 #ifdef DEBUG
@@ -77,7 +77,7 @@ void vn_event_expire_timers(void) {
     }
 }
 
-void vn_event_add_timer(vn_http_connection *conn, vn_msec_t timer) {
+void vn_event_add_timer(vn_http_connection_t *conn, vn_msec_t timer) {
     vn_priority_queue_node *node;
     vn_msec_t key;
 

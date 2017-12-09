@@ -99,7 +99,7 @@ static void vn_sig_usr1_handler(int signum) {
     exit(0);
 }
 
-static void vn_print_http_request(vn_http_request *hr);
+static void vn_print_http_request(vn_http_request_t *hr);
 
 int main(int argc, char *argv[]) {
     int rv, epfd, listenfd;
@@ -107,7 +107,7 @@ int main(int argc, char *argv[]) {
     socklen_t clientlen;
     struct sockaddr_storage clientaddr; 
     struct epoll_event ep_event;
-    vn_http_connection *http_conn, *conn;
+    vn_http_connection_t *http_conn, *conn;
     vn_msec_t time;
 
     vn_parse_options(argc, argv);
@@ -143,7 +143,7 @@ int main(int argc, char *argv[]) {
         err_sys("[main] vn_epoll_create error");
     }
 
-    if ((http_conn = (vn_http_connection *) malloc(sizeof(vn_http_connection))) == NULL) {
+    if ((http_conn = (vn_http_connection_t *) malloc(sizeof(vn_http_connection_t))) == NULL) {
         err_sys("[main] malloc vn_http_connection error");
     }
     vn_init_http_connection(http_conn, listenfd, epfd);
@@ -175,7 +175,7 @@ int main(int argc, char *argv[]) {
 
         /* Deal with returned list of events */
         for (i = 0; i < nready; i++) {
-            conn = (vn_http_connection *) events[i].data.ptr;
+            conn = (vn_http_connection_t *) events[i].data.ptr;
             fd = conn->fd;
 
             if (!((events[i].events & EPOLLIN) || (events[i].events & EPOLLOUT))) {
@@ -212,10 +212,10 @@ int main(int argc, char *argv[]) {
                         err_sys("[main] make_socket_non_blocking error");
                     }
 
-                    vn_http_connection *new_conn;
+                    vn_http_connection_t *new_conn;
                     struct epoll_event new_ep_ev;
 
-                    if ((new_conn = (vn_http_connection *) malloc(sizeof(vn_http_connection))) == NULL) {
+                    if ((new_conn = (vn_http_connection_t *) malloc(sizeof(vn_http_connection_t))) == NULL) {
                         err_sys("[main] malloc vn_http_connection error");
                     }
 
@@ -234,7 +234,7 @@ int main(int argc, char *argv[]) {
             /* End of fd == listenfd */
 
             } else {
-                vn_handle_http_connection(events[i].events, (vn_http_connection *) events[i].data.ptr);
+                vn_handle_http_connection(events[i].events, (vn_http_connection_t *) events[i].data.ptr);
             }
         }
     }
@@ -242,7 +242,7 @@ int main(int argc, char *argv[]) {
     return 0;
 }
 
-void vn_handle_http_connection(uint32_t events, vn_http_connection *conn) {
+void vn_handle_http_connection(uint32_t events, vn_http_connection_t *conn) {
     if (events & EPOLLIN) {
         vn_handle_read_event(conn);
     } else if(events & EPOLLOUT) {
@@ -250,7 +250,7 @@ void vn_handle_http_connection(uint32_t events, vn_http_connection *conn) {
     }
 }
 
-void vn_handle_read_event(vn_http_connection *conn) {
+void vn_handle_read_event(vn_http_connection_t *conn) {
     int nread, buf_len;
     int rv, req_line_completed, req_headers_completed;
 
@@ -338,7 +338,7 @@ void vn_handle_read_event(vn_http_connection *conn) {
 
 }
 
-void vn_handle_write_event(vn_http_connection *conn) {
+void vn_handle_write_event(vn_http_connection_t *conn) {
     ssize_t nwritten;
     int connection = VN_CONN_KEEP_ALIVE;
 
@@ -417,8 +417,8 @@ void vn_handle_write_event(vn_http_connection *conn) {
     
 }
 
-void vn_handle_get_connection(vn_http_connection *conn) {
-    vn_http_request *req;
+void vn_handle_get_connection(vn_http_connection_t *conn) {
+    vn_http_request_t *req;
     char uri[VN_MAX_HTTP_HEADER_VALUE], filepath[VN_MAX_HTTP_HEADER_VALUE];
 
     /* 
@@ -582,7 +582,7 @@ const char *vn_status_message(int code) {
     return msg;
 }
 
-static void vn_print_http_request(vn_http_request *hr) {
+static void vn_print_http_request(vn_http_request_t *hr) {
     int i;
     char name[VN_MAX_HTTP_HEADER_NAME], value[VN_MAX_HTTP_HEADER_VALUE];
     vn_linked_list_node *name_node, *value_node;

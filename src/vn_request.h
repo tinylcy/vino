@@ -46,7 +46,7 @@ typedef struct vn_http_request_s {
     /* HTTP body */
     vn_str         body;
     size_t         body_len;     /* HTTP body length (is exists) */
-} vn_http_request;
+} vn_http_request_t;
 
 typedef void (*timeout_handler)(void *);
 
@@ -73,25 +73,25 @@ typedef struct vn_http_connection_s {
 
     int                      keep_alive;
 
-    vn_http_request          request;
+    vn_http_request_t        request;
     timeout_handler          handler;
     vn_priority_queue_node  *pq_node;
-} vn_http_connection;
+} vn_http_connection_t;
 
 /*
  * Initialize HTTP request message.
  */
-void vn_init_http_request(vn_http_request *req);       
+void vn_init_http_request(vn_http_request_t *req);       
 
 /*
  * Initialize HTTP request connection.
  */ 
-void vn_init_http_connection(vn_http_connection *conn, int fd, int epfd);
+void vn_init_http_connection(vn_http_connection_t *conn, int fd, int epfd);
 
 /*
  * Reset HTTP request connectin. 
  */ 
-void vn_reset_http_connection(vn_http_connection *conn);
+void vn_reset_http_connection(vn_http_connection_t *conn);
 
 /*
  * Search and return the header `name` in parsed HTTP request
@@ -99,7 +99,7 @@ void vn_reset_http_connection(vn_http_connection *conn);
  * 
  * If header `name` is not found, NULL is returned.
  */
-vn_str *vn_get_http_header(vn_http_request *req, const char *name);
+vn_str *vn_get_http_header(vn_http_request_t *req, const char *name);
 
 /*
  * Close the connection, don't forget to cast the
