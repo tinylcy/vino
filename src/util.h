@@ -18,7 +18,7 @@
 typedef struct vn_str_s {
     const char    *p;         /* String pointer */
     size_t        len;        /* String length */
-} vn_str;
+} vn_str_t;
 
 /*  Vino configuration infomation */
 typedef struct vn_conf_s {
@@ -39,7 +39,7 @@ typedef struct vn_mime_entry_s {
  *  0 - Fetch success
  * <0 - Fetch failed 
  */
-int vn_get_string(vn_str *str, char *buf, size_t buf_len);
+int vn_get_string(vn_str_t *str, char *buf, size_t buf_len);
 
 /*
  * Check NULL pointer parameters. 
@@ -50,12 +50,12 @@ void vn_check_null(int num, ...);
 /*
  * Compare a self-defined string with a regular string.
  */
-int vn_str_cmp(const vn_str *str1, const char *str2);
+int vn_str_cmp(const vn_str_t *str1, const char *str2);
 
 /*
  * Convert a self-defined string pointed by `str` to int.
  */ 
-int vn_str_atoi(const vn_str *str);
+int vn_str_atoi(const vn_str_t *str);
 
 /*
  * Fetch substring from `s` to `end` into `vs`.
@@ -65,7 +65,7 @@ int vn_str_atoi(const vn_str *str);
  * until a delimiter character or end-of-string is found.
  */
 const char *vn_skip(const char *s, const char *end,
-                        const char *delims, vn_str *vs);
+                        const char *delims, vn_str_t *vs);
 
 /* 
  * Set the O_NONBLOCK flag on the descriptor.

@@ -16,7 +16,7 @@ typedef unsigned long vn_msec_t;   /* Milliseconds */
 
 volatile vn_msec_t vn_current_msec;
 
-vn_priority_queue pq;
+vn_priority_queue_t pq;
 
 int vn_event_timer_init(void);
 

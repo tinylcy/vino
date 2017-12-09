@@ -15,43 +15,43 @@ typedef struct vn_linked_list_node_s {
     struct vn_linked_list_node_s *prev;
     /* Pointer to data */
     void                         *data;
-} vn_linked_list_node;
+} vn_linked_list_node_t;
 
 /*
  * Linked list structure 
  */ 
 typedef struct vn_linked_list_s {
     /* Pointer to the first of list */
-    vn_linked_list_node *head;
+    vn_linked_list_node_t *head;
     /* Pointer to the last node of list */
-    vn_linked_list_node *tail;
+    vn_linked_list_node_t *tail;
     /* Size of the linked list */
     size_t size;
-} vn_linked_list;
+} vn_linked_list_t;
 
 /*
  * Initialize a linked list. 
  */ 
-void vn_linked_list_init(vn_linked_list *list);
+void vn_linked_list_init(vn_linked_list_t *list);
 
 /*
  * Append data to the tail of list. 
  */ 
-void vn_linked_list_append(vn_linked_list *list, void *data);
+void vn_linked_list_append(vn_linked_list_t *list, void *data);
 
 /* 
  * Free the linked list and all its node and data.
  */ 
-void vn_linked_list_free(vn_linked_list *list);
+void vn_linked_list_free(vn_linked_list_t *list);
 
 /*
  * Return the size of the linked list. 
  */ 
-size_t vn_linked_list_size(vn_linked_list *list);
+size_t vn_linked_list_size(vn_linked_list_t *list);
 
 /*
  * Check if the linked list is empty. 
  */ 
-int vn_linked_list_isempty(vn_linked_list *list);
+int vn_linked_list_isempty(vn_linked_list_t *list);
 
 #endif /* VINO_VN_LINKED_LIST_H */

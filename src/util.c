@@ -44,7 +44,7 @@ static vn_mime_entry vn_builtin_mime_type[] = {
     { NULL, 0, NULL }
 };
 
-int vn_get_string(vn_str *str, char *buf, size_t buf_len) {
+int vn_get_string(vn_str_t *str, char *buf, size_t buf_len) {
     const char *s;
     unsigned int i;
 
@@ -64,7 +64,7 @@ int vn_get_string(vn_str *str, char *buf, size_t buf_len) {
     return 0;
 }
 
-int vn_str_cmp(const vn_str *str1, const char *str2) {
+int vn_str_cmp(const vn_str_t *str1, const char *str2) {
     int i;
     const char *p1 = str1->p, *p2 = str2;
     size_t n1 = str1->len, n2 = strlen(str2);
@@ -85,7 +85,7 @@ int vn_str_cmp(const vn_str *str1, const char *str2) {
    
 }
 
-int vn_str_atoi(const vn_str *str) {
+int vn_str_atoi(const vn_str_t *str) {
     char *buf;
     int rv;
 
@@ -111,7 +111,7 @@ void vn_check_null(int num, ...) {
 }
 
 const char *vn_skip(const char *s, const char *end, const char *delims,
-                         vn_str *vs) {
+                         vn_str_t *vs) {
     vs->p = s;
     while (s < end && strchr(delims, *s) == NULL) { s++; }
     vs->len = s - vs->p;

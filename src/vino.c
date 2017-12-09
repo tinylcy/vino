@@ -452,7 +452,7 @@ void vn_handle_get_connection(vn_http_connection_t *conn) {
     void *srcp;
     unsigned int file_size;
     char mime_type[VN_FILETYPE_SIZE];
-    vn_str *conn_str;
+    vn_str_t *conn_str;
     ssize_t nwritten;
     size_t headers_len;
     
@@ -585,8 +585,8 @@ const char *vn_status_message(int code) {
 static void vn_print_http_request(vn_http_request_t *hr) {
     int i;
     char name[VN_MAX_HTTP_HEADER_NAME], value[VN_MAX_HTTP_HEADER_VALUE];
-    vn_linked_list_node *name_node, *value_node;
-    vn_str *name_str, *value_str;
+    vn_linked_list_node_t *name_node, *value_node;
+    vn_str_t *name_str, *value_str;
 
     if (vn_get_string(&hr->method, value, VN_MAX_HTTP_HEADER_VALUE) < 0) {
         err_sys("[print_http_request] vn_get_string [method] error");
@@ -611,8 +611,8 @@ static void vn_print_http_request(vn_http_request_t *hr) {
     name_node = hr->header_name_list.head;
     value_node = hr->header_value_list.head;
     while (name_node && value_node) {
-        name_str = (vn_str *) name_node->data;
-        value_str = (vn_str *) value_node->data;
+        name_str = (vn_str_t *) name_node->data;
+        value_str = (vn_str_t *) value_node->data;
         if (vn_get_string(name_str, name, VN_MAX_HTTP_HEADER_NAME) < 0 ||
             vn_get_string(value_str, value, VN_MAX_HTTP_HEADER_VALUE) < 0) {
             err_sys("[print_http_request] vn_get_string [header] error");

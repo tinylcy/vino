@@ -242,7 +242,7 @@ int vn_http_parse_header_line(vn_http_connection_t *conn, const char *buf) {
     vn_http_request_t *req;
     const char *p;
     char ch;
-    vn_str *name_str, *value_str;
+    vn_str_t *name_str, *value_str;
 
     enum {
         sw_start = 0,
@@ -355,8 +355,8 @@ int vn_http_parse_header_line(vn_http_connection_t *conn, const char *buf) {
             case LF:
                 req->header_cnt += 1;
 
-                if ((name_str = (vn_str *) vn_palloc(conn->pool, sizeof(vn_str))) == NULL ||
-                    (value_str = (vn_str *) vn_palloc(conn->pool, sizeof(vn_str))) == NULL) {
+                if ((name_str = (vn_str_t *) vn_palloc(conn->pool, sizeof(vn_str_t))) == NULL ||
+                    (value_str = (vn_str_t *) vn_palloc(conn->pool, sizeof(vn_str_t))) == NULL) {
                     err_sys("[vn_http_parse_header_line] vn_palloc error");
                 }
                 name_str->p = req->header_name_start;

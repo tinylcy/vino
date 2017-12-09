@@ -10,7 +10,7 @@
 #include "vn_logger.h"
 #include "vn_error.h"
 
-extern vn_priority_queue pq;
+extern vn_priority_queue_t pq;
 
 int vn_event_timer_init(void) {
     vn_pq_init(&pq);
@@ -34,7 +34,7 @@ void vn_event_time_update(void) {
 
 vn_msec_t vn_event_find_timer(void) {
     long timer;
-    vn_priority_queue_node *node;
+    vn_priority_queue_node_t *node;
 
     if (vn_pq_isempty(&pq)) {
         return 0;
@@ -46,7 +46,7 @@ vn_msec_t vn_event_find_timer(void) {
 }
 
 void vn_event_expire_timers(void) {
-    vn_priority_queue_node *node;
+    vn_priority_queue_node_t *node;
     vn_http_connection_t *conn;
 
     while (!vn_pq_isempty(&pq)) {
@@ -78,10 +78,10 @@ void vn_event_expire_timers(void) {
 }
 
 void vn_event_add_timer(vn_http_connection_t *conn, vn_msec_t timer) {
-    vn_priority_queue_node *node;
+    vn_priority_queue_node_t *node;
     vn_msec_t key;
 
-    if ((node = (vn_priority_queue_node *) vn_palloc(conn->pool, sizeof(vn_priority_queue_node))) == NULL) {
+    if ((node = (vn_priority_queue_node_t *) vn_palloc(conn->pool, sizeof(vn_priority_queue_node_t))) == NULL) {
         err_sys("[vn_event_add_timer] vn_palloc error");
     }
 

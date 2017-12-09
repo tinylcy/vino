@@ -88,11 +88,11 @@ void vn_reset_http_connection(vn_http_connection_t *conn) {
     /* Be careful: the `pq_node` shouldn't be reset to NULL */ 
 }
 
-vn_str *vn_get_http_header(vn_http_request_t *req, const char *name) {
+vn_str_t *vn_get_http_header(vn_http_request_t *req, const char *name) {
     int i;
-    vn_str *name_str, *value_str;
-    vn_linked_list *name_list, *value_list;
-    vn_linked_list_node *name_node, *value_node;
+    vn_str_t *name_str, *value_str;
+    vn_linked_list_t *name_list, *value_list;
+    vn_linked_list_node_t *name_node, *value_node;
 
     name_list = &req->header_name_list;
     value_list = &req->header_value_list;
@@ -104,8 +104,8 @@ vn_str *vn_get_http_header(vn_http_request_t *req, const char *name) {
     name_node = name_list->head;
     value_node = value_list->head;
     while (name_node && value_node) {
-        name_str = (vn_str *) name_node->data;
-        value_str = (vn_str *) value_node->data;
+        name_str = (vn_str_t *) name_node->data;
+        value_str = (vn_str_t *) value_node->data;
         if (!vn_str_cmp(name_str, name)) {
             return value_str;
         }
@@ -117,7 +117,7 @@ vn_str *vn_get_http_header(vn_http_request_t *req, const char *name) {
 
 void vn_close_http_connection(void *connection) {
     vn_http_connection_t *conn;
-    vn_priority_queue_node *pq_node;
+    vn_priority_queue_node_t *pq_node;
 
     conn = (vn_http_connection_t *) connection;
     pq_node = conn->pq_node;
