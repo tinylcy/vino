@@ -74,11 +74,7 @@ int vn_str_cmp(const vn_str_t *str1, const char *str2) {
     
     if (i == shorter_len) {
         if (n1 == n2) { return 0; }
-        if (shorter_len < n1) {
-            return 1;
-        } else {
-            return -1;
-        }
+        return (shorter_len < n1 ? 1 : -1);
     } else {
         return (p1[i] < p2[i] ? -1 : 1); 
     }
